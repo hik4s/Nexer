@@ -220,15 +220,35 @@ async def apertar_ok(page):
 
 
 async def atualizar_pagina(page):
+    """
+    Atualiza a página sem limite de tempo finito.
 
-    await page.reload()
+    Aguarda o DOM principal ser reconstruído, sem depender
+    do evento load, que pode nunca terminar em aplicações
+    Angular com requisições persistentes.
+    """
 
-    await page.wait_for_load_state(
-        "networkidle"
+    url_anterior = page.url
+
+    print(
+        "[INFO] Atualizando página...",
+        flush=True,
+    )
+
+    await page.reload(
+        wait_until="domcontentloaded",
+        timeout=0,
+    )
+
+    await page.wait_for_url(
+        url_anterior,
+        wait_until="domcontentloaded",
+        timeout=0,
     )
 
     print(
-        "[OK] Página atualizada."
+        "[OK] Página atualizada.",
+        flush=True,
     )
 
 

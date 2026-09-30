@@ -46,7 +46,7 @@ RELATORIOS = [
 
     {
     "modulo": "interrupcoes_evento",
-    "paralelo": False,
+    "paralelo": True,
     "nome_arquivo": "Interrupcoes_Evento.csv",
     "empresa_desejada": "ESS",
     "url": "https://indicadoresenergisaess.scl.corp/sgind/#/relatinterrupevento",
@@ -57,7 +57,22 @@ RELATORIOS = [
     "paralelo": False,
     "url": "https://indicadoresenergisaess.scl.corp/iqos/#/listaresultados",
     "nome_arquivo": "ATENDIMENTO_CHEIO"
-    }
+    },
+    {
+    "modulo": "inconsistentes",
+    "paralelo": False,
+    "url": "https://indicadoresenergisaess.scl.corp/sgind/#/ocorrenciasInconsistentes",
+    "nome_arquivo": "OcorrenciaInconsistente.csv",
+    "formato_data": "datahora"
+    },
+    {
+    "modulo": "tarefas",
+    "formato_data": "datahora",
+    "url": ("https://indicadoresenergisaess.scl.corp/sgind/#/relattarefas"),
+    "empresa_desejada": "ESS",
+    "nome_arquivo": "Relatorio_Tarefas.csv",
+    "paralelo": True,
+    },
     # --- Exemplo de como adicionar o 2º relatório ---
     # Copie relatorios/_template.py para relatorios/nome_do_relatorio.py,
     # ajuste os seletores dentro dele, e adicione a entrada aqui:

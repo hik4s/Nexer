@@ -7,7 +7,7 @@ from datetime import datetime
 
 STATUS = {}
 
-MAX_PARALELO = 3
+MAX_PARALELO = 9
 
 SEMAFORO = asyncio.Semaphore(
     MAX_PARALELO

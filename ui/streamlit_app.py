@@ -179,8 +179,10 @@ NOMES_RELATORIOS = {
     "interrupcoes_cliente": "Interrupções por Cliente",
     "interrupcoes_evento": "Eventos",
     "todas_ocorrencias": "Ocorrências",
+    "inconsistentes": "Inconsistências",
+    "tarefas": "Tarefas",
     "dia_critico": "Dia Crítico",
-    "iqos_resultados": "IQOS"
+    "iqos_resultados": "IQOS",
 }
 
 
@@ -190,9 +192,19 @@ ORDEM_RELATORIOS = [
     "interrupcoes_cliente",
     "interrupcoes_evento",
     "todas_ocorrencias",
+    "inconsistentes",
+    "tarefas",
     "dia_critico",
-    "iqos_resultados"
+    "iqos_resultados",
 ]
+
+OPCOES_RELATORIOS = {
+    modulo: NOMES_RELATORIOS.get(
+        modulo,
+        modulo
+    )
+    for modulo in ORDEM_RELATORIOS
+}
 
 
 # =====================================================
@@ -743,7 +755,8 @@ def limpar_logs_antigos():
 
 def preparar_log_worker(
     periodo_inicio,
-    periodo_fim
+    periodo_fim,
+    modulos_selecionados
 ):
     """
     Cria um worker.log novo e registra imediatamente
@@ -761,6 +774,21 @@ def preparar_log_worker(
         encoding="utf-8",
         buffering=1
     )
+
+    log.write(
+        "Relatórios selecionados:\n"
+    )
+
+    for modulo in modulos_selecionados:
+
+        nome = NOMES_RELATORIOS.get(
+            modulo,
+            modulo
+        )
+
+        log.write(
+            f"- {nome}\n"
+        )
 
     log.write(
         "=" * 70
@@ -866,9 +894,9 @@ def limpar_downloads_antigos():
 
 def iniciar_execucao(
     periodo_inicio,
-    periodo_fim
+    periodo_fim,
+    modulos_selecionados
 ):
-
     if execucao_ativa():
 
         raise RuntimeError(
@@ -892,6 +920,21 @@ def iniciar_execucao(
 
         raise RuntimeError(
             "As credenciais não estão configuradas."
+        )
+    modulos_validos = set(
+        ORDEM_RELATORIOS
+    )
+
+    modulos_selecionados = [
+        modulo
+        for modulo in modulos_selecionados
+        if modulo in modulos_validos
+    ]
+
+    if not modulos_selecionados:
+
+        raise ValueError(
+            "Nenhum relatório válido foi selecionado."
         )
 
 
@@ -925,20 +968,25 @@ def iniciar_execucao(
         "PYTHONUNBUFFERED"
     ] = "1"
 
+    modulos_json = json.dumps(
+    modulos_selecionados,
+    ensure_ascii=False
+)
+
     comando = [
-        str(PYTHON_WORKER),
+    str(PYTHON_WORKER),
 
-        # Executa o Python sem buffer de saída.
-        "-u",
+    "-u",
 
-        str(WORKER),
-        periodo_inicio,
-        periodo_fim
-    ]
+    str(WORKER),
+    periodo_inicio,
+    periodo_fim,
+    modulos_json ]
 
     log = preparar_log_worker(
-        periodo_inicio,
-        periodo_fim
+    periodo_inicio,
+    periodo_fim,
+    modulos_selecionados
     )
 
     configuracao = {
@@ -1354,6 +1402,74 @@ with coluna_fim:
         format="DD/MM/YYYY"
     )
 
+# =====================================================
+# SELEÇÃO DOS RELATÓRIOS
+# =====================================================
+
+st.subheader(
+    "Relatórios da execução"
+)
+
+selecionar_todos = st.checkbox(
+    "Selecionar todos os relatórios",
+    value=True,
+    disabled=execucao_ativa(),
+    key="selecionar_todos_relatorios"
+)
+
+nomes_disponiveis = [
+    OPCOES_RELATORIOS[
+        modulo
+    ]
+    for modulo in ORDEM_RELATORIOS
+]
+
+if selecionar_todos:
+
+    nomes_selecionados = nomes_disponiveis
+
+    st.multiselect(
+        "Relatórios selecionados",
+        options=nomes_disponiveis,
+        default=nomes_disponiveis,
+        disabled=True,
+        key="relatorios_todos_visualizacao"
+    )
+
+else:
+
+    nomes_selecionados = st.multiselect(
+        "Escolha um ou mais relatórios",
+        options=nomes_disponiveis,
+        default=[],
+        disabled=execucao_ativa(),
+        placeholder="Selecione os relatórios",
+        key="relatorios_individuais"
+    )
+
+
+modulos_selecionados = [
+    modulo
+    for modulo in ORDEM_RELATORIOS
+    if OPCOES_RELATORIOS[
+        modulo
+    ] in nomes_selecionados
+]
+
+
+if modulos_selecionados:
+
+    st.caption(
+        f"{len(modulos_selecionados)} de "
+        f"{len(ORDEM_RELATORIOS)} relatórios selecionados."
+    )
+
+else:
+
+    st.warning(
+        "Selecione pelo menos um relatório "
+        "para iniciar a execução."
+    )
 
 em_execucao = execucao_ativa()
 
@@ -1372,7 +1488,7 @@ with coluna_executar:
             else "🚀 Executar Relatórios"
         ),
         use_container_width=True,
-        disabled=em_execucao,
+        disabled=(em_execucao or not modulos_selecionados),
         type="primary"
     )
 
@@ -1452,7 +1568,8 @@ if executar:
 
             resultado_inicio = iniciar_execucao(
                 periodo_inicio,
-                periodo_fim
+                periodo_fim,
+                modulos_selecionados
             )
 
             pid = resultado_inicio[
