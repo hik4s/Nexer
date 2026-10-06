@@ -53,6 +53,41 @@ class BrowserManager:
         except Exception as exc:
             raise BrowserManagerError("BROWSER_CONTEXT_FAILED") from exc
 
+
+    def create_page(
+        self,
+        execution_id: str | int,
+        *,
+        storage_state: str | Path | None = None,
+    ):
+        context = self.create_context(
+            execution_id,
+            storage_state=storage_state,
+        )
+        try:
+            page = context.new_page()
+        except Exception as exc:
+            context.close()
+            raise BrowserManagerError("BROWSER_PAGE_FAILED") from exc
+        return BrowserPageHandle(context=context, page=page)
+
+
+class BrowserPageHandle:
+    def __init__(self, *, context, page):
+        self._context = context
+        self._page = page
+
+    def __getattr__(self, name):
+        return getattr(self._page, name)
+
+    def close(self) -> None:
+        self._context.close()
+
+    @property
+    def raw_page(self):
+        return self._page
+
+
     def close(self) -> None:
         browser = self._browser
         playwright = self._playwright
