@@ -20,7 +20,10 @@ class DatabaseSchemaTests(unittest.TestCase):
             command.upgrade(config, "head")
 
             engine = create_engine(f"sqlite:///{db_path}")
-            tables = set(inspect(engine).get_table_names())
+            try:
+                tables = set(inspect(engine).get_table_names())
+            finally:
+                engine.dispose()
 
             self.assertTrue(
                 {
