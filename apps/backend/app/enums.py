@@ -45,3 +45,8 @@ class ExecutionStage(str, Enum):
     FINISHED = "FINISHED"
     FAILED = "FAILED"
     CANCELLED = "CANCELLED"
+
+
+class WorkerStatus(str, Enum):
+    ONLINE = "ONLINE"
+    OFFLINE = "OFFLINE"
