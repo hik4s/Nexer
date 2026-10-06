@@ -21,6 +21,7 @@ class RecipeRunner:
         resolver = VariableResolver(
             declarations=validated.get("variables", {}),
             values=context.variables,
+            secret_provider=context.secret_provider,
         )
         resolver.validate_required()
         context.resolver = resolver
