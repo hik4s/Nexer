@@ -135,7 +135,7 @@ class ExecutionsApiTests(unittest.TestCase):
 
 
     def test_create_execution_persists_input_variables(self):
-        automation_id = self._create_published_automation()
+        automation_id = self._seed_published_automation()
 
         response = self.client.post(
             "/executions",
