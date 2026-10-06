@@ -95,7 +95,7 @@ class ExecutionSecretPolicyTests(unittest.TestCase):
                 )
             )
             db.commit()
-            cls.automation_id = automation.id
+            self.automation_id = automation.id
         finally:
             db.close()
 
