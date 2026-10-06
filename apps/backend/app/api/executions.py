@@ -20,6 +20,34 @@ from app.schemas_execution import (
     ExecutionRead,
 )
 
+_CREDENTIAL_REF_KEYS = {"credential_ref"}
+
+
+def _validate_secret_inputs(payload_inputs: dict, recipe: dict) -> None:
+    declarations = recipe.get("variables", {})
+    if not isinstance(declarations, dict):
+        return
+
+    for name, declaration in declarations.items():
+        if not isinstance(declaration, dict) or not declaration.get("secret"):
+            continue
+        if name not in payload_inputs:
+            continue
+
+        value = payload_inputs[name]
+        if (
+            not isinstance(value, dict)
+            or set(value.keys()) != _CREDENTIAL_REF_KEYS
+            or not isinstance(value.get("credential_ref"), str)
+            or not value["credential_ref"].strip()
+        ):
+            raise ApiError(
+                422,
+                "SECRET_INPUT_FORBIDDEN",
+                "Secret execution inputs must use a credential reference",
+            )
+
+
 
 router = APIRouter(prefix="/executions", tags=["Executions"])
 
@@ -105,6 +133,7 @@ def create_execution(payload: ExecutionCreate, db: Session = Depends(get_db)):
                 "AUTOMATION_VERSION_NOT_FOUND",
                 "Automation current version is missing",
             )
+        _validate_secret_inputs(payload.inputs, version.recipe)
         versions[automation.id] = version.version
 
     execution = Execution(
