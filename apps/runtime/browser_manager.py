@@ -9,7 +9,12 @@ class BrowserManagerError(RuntimeError):
 
 
 class BrowserManager:
-    def __init__(self, *, headless: bool = True, temp_root: Path = Path("./downloads")):
+    def __init__(
+        self,
+        *,
+        headless: bool = True,
+        temp_root: Path = Path("./downloads"),
+    ):
         self.headless = headless
         self.temp_root = Path(temp_root)
         self._playwright = None
@@ -53,7 +58,6 @@ class BrowserManager:
         except Exception as exc:
             raise BrowserManagerError("BROWSER_CONTEXT_FAILED") from exc
 
-
     def create_page(
         self,
         execution_id: str | int,
@@ -70,23 +74,6 @@ class BrowserManager:
             context.close()
             raise BrowserManagerError("BROWSER_PAGE_FAILED") from exc
         return BrowserPageHandle(context=context, page=page)
-
-
-class BrowserPageHandle:
-    def __init__(self, *, context, page):
-        self._context = context
-        self._page = page
-
-    def __getattr__(self, name):
-        return getattr(self._page, name)
-
-    def close(self) -> None:
-        self._context.close()
-
-    @property
-    def raw_page(self):
-        return self._page
-
 
     def close(self) -> None:
         browser = self._browser
@@ -118,6 +105,23 @@ class BrowserPageHandle:
             f"BrowserManager(headless={self.headless!r}, "
             f"temp_root={str(self.temp_root)!r})"
         )
+
+
+class BrowserPageHandle:
+    def __init__(self, *, context, page):
+        self._context = context
+        self._page = page
+
+    def __getattr__(self, name):
+        return getattr(self._page, name)
+
+    def close(self) -> None:
+        self._context.close()
+
+    @property
+    def raw_page(self):
+        return self._page
+
 
 def _safe_execution_id(execution_id: str | int) -> str:
     value = str(execution_id)
