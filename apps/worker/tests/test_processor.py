@@ -118,6 +118,12 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
                         "selector": "#start",
                         "value": "{{period_start}}",
                     },
+                    {
+                        "id": "fill_company",
+                        "action": "fill",
+                        "selector": "#company",
+                        "value": "{{company}}",
+                    },
                 ]
 
             db.add(
@@ -131,7 +137,11 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
                             "period_start": {
                                 "type": "string",
                                 "required": True,
-                            }
+                            },
+                            "company": {
+                                "type": "string",
+                                "required": True,
+                            },
                         },
                         "steps": steps,
                         "output": {"type": "file"},
@@ -150,6 +160,7 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
                 keep_local_copy=True,
                 overwrite_existing=False,
                 test_mode=True,
+                inputs={"company": "001"},
                 cancel_requested=False,
             )
             db.add(execution)
@@ -200,6 +211,7 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
         self.assertEqual(result.status, ExecutionStatus.SUCCEEDED.value)
         self.assertEqual(pages[0].calls[0][0], "goto")
         self.assertIn(("fill", "2026-10-01"), pages[0].calls)
+        self.assertIn(("fill", "001"), pages[0].calls)
 
         db = self.session_factory()
         try:
