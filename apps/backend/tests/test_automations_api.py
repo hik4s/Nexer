@@ -45,6 +45,18 @@ class AutomationsApiTests(unittest.TestCase):
         app.dependency_overrides[get_db] = override_get_db
         cls.client = TestClient(app)
 
+
+    def setUp(self):
+        db = self.session_factory()
+        try:
+            for table in ("events", "artifacts", "checkpoints", "execution_automations"):
+                db.execute(__import__("sqlalchemy").text(f"DELETE FROM {table}"))
+            for table in ("executions", "automation_versions", "destinations", "automations"):
+                db.execute(__import__("sqlalchemy").text(f"DELETE FROM {table}"))
+            db.commit()
+        finally:
+            db.close()
+
     @classmethod
     def tearDownClass(cls):
         app.dependency_overrides.clear()
