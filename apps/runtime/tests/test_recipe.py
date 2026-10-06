@@ -37,6 +37,28 @@ class RecipeValidationTests(unittest.TestCase):
         self.assertEqual(validated["name"], "Relatorio piloto")
         self.assertEqual(len(validated["steps"]), 2)
 
+
+    def test_navigate_accepts_url_provided_by_declared_variable(self):
+        recipe = {
+            "schema_version": 1,
+            "name": "URL parametrizada",
+            "variables": {
+                "base_url": {"type": "string", "required": True},
+            },
+            "steps": [
+                {
+                    "id": "open",
+                    "action": "navigate",
+                    "url": "{{base_url}}",
+                }
+            ],
+            "output": {"type": "file"},
+        }
+
+        validated = validate_recipe(recipe)
+
+        self.assertEqual(validated["steps"][0]["url"], "{{base_url}}")
+
     def test_unknown_action_is_rejected(self):
         recipe = {
             "schema_version": 1,
