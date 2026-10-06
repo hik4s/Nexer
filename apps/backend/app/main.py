@@ -7,7 +7,9 @@ from fastapi.responses import JSONResponse
 
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.api.automations import router as automations_router
 from app.config import get_settings
+from app.errors import ApiError
 
 
 settings = get_settings()
@@ -29,6 +31,22 @@ app.add_middleware(
 async def request_metrics(request: Request, call_next):
     app.state.requests_total += 1
     return await call_next(request)
+
+
+@app.exception_handler(ApiError)
+async def api_error_handler(
+    request: Request, exc: ApiError
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+        },
+    )
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -83,6 +101,9 @@ async def unhandled_exception_handler(
             }
         },
     )
+
+
+app.include_router(automations_router)
 
 
 @app.get("/")
