@@ -38,7 +38,7 @@ class RecipeRunner:
 
             try:
                 self.registry.execute(step["action"], step, context)
-            except (ActionExecutionError, Exception) as exc:
+            except Exception as exc:
                 context.checkpoint(
                     step_id=step["id"],
                     step_index=index,
