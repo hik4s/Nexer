@@ -4,7 +4,10 @@ import re
 _VARIABLE_PATTERN = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
 
 
-from credentials import CredentialResolutionError\n\n\nclass VariableResolutionError(ValueError):
+from credentials import CredentialResolutionError
+
+
+class VariableResolutionError(ValueError):
     """Raised when recipe variables cannot be resolved safely."""
 
 
