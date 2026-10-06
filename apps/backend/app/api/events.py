@@ -3,9 +3,9 @@ import json
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
-from app.database import SessionLocal, get_db
+from app.database import get_db
 from app.enums import ExecutionStatus
 from app.errors import ApiError
 from app.repositories.event import list_after
@@ -46,9 +46,15 @@ async def execution_events(
 
     last_event_id = _parse_last_event_id(request)
 
+    stream_session_factory = sessionmaker(
+        bind=db.get_bind(),
+        autoflush=False,
+        autocommit=False,
+    )
+
     async def stream():
         nonlocal last_event_id
-        stream_db = SessionLocal()
+        stream_db = stream_session_factory()
         try:
             while True:
                 events = list_after(
