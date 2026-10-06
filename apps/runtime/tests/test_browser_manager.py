@@ -101,6 +101,43 @@ class BrowserManagerTests(unittest.TestCase):
 
                 manager.close()
 
+
+    def test_create_page_closes_its_context(self):
+        browser = FakeBrowser()
+        playwright = FakePlaywright(browser)
+
+        class FakeContext:
+            def __init__(self):
+                self.closed = False
+                self.pages = []
+
+            def new_page(self):
+                page = object()
+                self.pages.append(page)
+                return page
+
+            def close(self):
+                self.closed = True
+
+        context = FakeContext()
+        browser.new_context = lambda **_kwargs: context
+
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = BrowserManager(
+                headless=True,
+                temp_root=Path(tmp),
+            )
+            with patch(
+                "browser_manager.sync_playwright",
+                return_value=FakePlaywrightHandle(playwright),
+            ):
+                manager.start()
+                handle = manager.create_page("execution-3")
+                handle.close()
+                manager.close()
+
+        self.assertTrue(context.closed)
+
     def test_storage_state_is_optional_and_never_written_to_logs(self):
         browser = FakeBrowser()
         playwright = FakePlaywright(browser)
