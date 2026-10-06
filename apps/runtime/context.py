@@ -13,6 +13,7 @@ class ExecutionContext:
     dry_run: bool = False
     emit: Callable[[dict], None] | None = None
     resolver: object | None = None
+    secret_provider: object | None = None
     artifacts: list[dict] = field(default_factory=list)
     current_step_id: str | None = None
     cancellation_requested: Callable[[], bool] | None = None
