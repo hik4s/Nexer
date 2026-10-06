@@ -91,7 +91,8 @@ def _validate_step_requirements(action: str, step: dict) -> None:
         if not isinstance(url, str) or not url.strip():
             raise RecipeValidationError("URL_REQUIRED")
         if not url.startswith(("http://", "https://")):
-            raise RecipeValidationError("UNSAFE_URL")
+            if not _VARIABLE_PATTERN.fullmatch(url.strip()):
+                raise RecipeValidationError("UNSAFE_URL")
 
     if action in {"click", "fill", "select", "press", "wait_for", "download"}:
         selector = step.get("selector")
