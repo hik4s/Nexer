@@ -2,6 +2,11 @@
   "schema_version": 1,
   "name": "RelatPy Local Pilot",
   "variables": {
+    "base_url": {
+      "type": "string",
+      "required": true,
+      "secret": false
+    },
     "company": {
       "type": "string",
       "required": true,
@@ -21,9 +26,9 @@
       "value": "{{company}}"
     },
     {
-      "id": "click_download",
+      "id": "prepare",
       "action": "click",
-      "selector": "#download"
+      "selector": "#prepare"
     },
     {
       "id": "download",
