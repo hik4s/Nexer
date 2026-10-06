@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.automations import router as automations_router
+from app.api.executions import router as executions_router
 from app.config import get_settings
 from app.errors import ApiError
 
@@ -104,6 +105,7 @@ async def unhandled_exception_handler(
 
 
 app.include_router(automations_router)
+app.include_router(executions_router)
 
 
 @app.get("/")
