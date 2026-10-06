@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.automations import router as automations_router
 from app.api.events import router as events_router
+from app.api.diagnostics import router as diagnostics_router
 from app.api.executions import router as executions_router
 from app.config import get_settings
 from app.errors import ApiError
@@ -108,6 +109,7 @@ async def unhandled_exception_handler(
 app.include_router(automations_router)
 app.include_router(executions_router)
 app.include_router(events_router)
+app.include_router(diagnostics_router)
 
 
 @app.get("/")
