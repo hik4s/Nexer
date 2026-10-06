@@ -1,7 +1,7 @@
 import unittest
 
 
-from loop import WorkerLoop
+from relatpy_worker.loop import WorkerLoop
 
 
 class FakeStopEvent:
