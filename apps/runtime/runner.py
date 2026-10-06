@@ -10,6 +10,7 @@ class RunResult:
     completed_steps: int
     failed_step_id: str | None
     error: str | None = None
+    cancelled: bool = False
 
 
 class RecipeRunner:
@@ -29,6 +30,18 @@ class RecipeRunner:
         completed = 0
 
         for index, step in enumerate(validated["steps"]):
+            if context.is_cancellation_requested():
+                context.checkpoint(
+                    step_id=step["id"],
+                    step_index=index,
+                    status="CANCELLED",
+                )
+                return RunResult(
+                    completed_steps=completed,
+                    failed_step_id=None,
+                    cancelled=True,
+                )
+
             context.current_step_id = step["id"]
             context.event(
                 "step.started",
