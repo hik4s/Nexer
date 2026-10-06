@@ -130,11 +130,16 @@ class WorkerExecutionProcessor:
                     event,
                 ),
                 secret_provider=self.secret_provider,
+                cancellation_requested=lambda: self._execution_cancel_requested(
+                    execution.id
+                ),
             )
             result = self.runner.run(recipe, context)
             now = self._now()
 
-            if result.failed_step_id is None:
+            if result.cancelled:
+                self._cancel_item(execution.id, item.id)
+            elif result.failed_step_id is None:
                 self._update_item(
                     item.id,
                     status=ExecutionAutomationStatus.SUCCEEDED.value,
@@ -181,6 +186,15 @@ class WorkerExecutionProcessor:
                         {"error_type": type(exc).__name__},
                         level="WARNING",
                     )
+
+
+    def _execution_cancel_requested(self, execution_id: int) -> bool:
+        db = self.session_factory()
+        try:
+            execution = db.get(Execution, execution_id)
+            return bool(execution and execution.cancel_requested)
+        finally:
+            db.close()
 
     def _load_recipe(self, automation_id: int, version: int) -> dict:
         db = self.session_factory()
