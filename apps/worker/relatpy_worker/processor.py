@@ -195,7 +195,7 @@ class WorkerExecutionProcessor:
 
     @staticmethod
     def _execution_variables(execution: Execution) -> dict:
-        variables = {}
+        variables = dict(execution.inputs or {})
         if execution.period_start is not None:
             variables["period_start"] = execution.period_start.date().isoformat()
         if execution.period_end is not None:
