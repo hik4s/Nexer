@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -84,7 +84,7 @@ class WorkerExecutionProcessor:
             status=ExecutionAutomationStatus.RUNNING.value,
             stage=ExecutionStage.CREATED.value,
             attempts=item.attempts + 1,
-            started_at=datetime.utcnow(),
+            started_at=self._now(),
             last_progress_at=datetime.utcnow(),
         )
         self._emit(
@@ -188,10 +188,14 @@ class WorkerExecutionProcessor:
     def _execution_variables(execution: Execution) -> dict:
         variables = {}
         if execution.period_start is not None:
-            variables["period_start"] = execution.period_start.isoformat()
+            variables["period_start"] = execution.period_start.date().isoformat()
         if execution.period_end is not None:
-            variables["period_end"] = execution.period_end.isoformat()
+            variables["period_end"] = execution.period_end.date().isoformat()
         return variables
+
+    @staticmethod
+    def _now() -> datetime:
+        return datetime.now(timezone.utc).replace(tzinfo=None)
 
     def _mark_failed(
         self,
