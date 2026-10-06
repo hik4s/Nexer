@@ -1,5 +1,6 @@
 import tempfile
 import unittest
+from unittest.mock import Mock
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -250,7 +251,7 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
         )
         worker.register()
 
-        runner = __import__("unittest").mock.Mock()
+        runner = Mock()
         runner.run.return_value = RunResult(
             completed_steps=1,
             failed_step_id=None,
