@@ -12,9 +12,10 @@ class VariableResolutionError(ValueError):
 
 
 class VariableResolver:
-    def __init__(self, *, declarations: dict, values: dict):
+    def __init__(self, *, declarations: dict, values: dict, secret_provider=None):
         self.declarations = declarations
         self.values = values
+        self.secret_provider = secret_provider
 
     def resolve(self, value):
         if isinstance(value, str):
