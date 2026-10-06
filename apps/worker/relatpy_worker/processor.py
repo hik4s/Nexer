@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from app.enums import ExecutionAutomationStatus, ExecutionStage, ExecutionStatus
 from app.models import AutomationVersion, Event, Execution, ExecutionAutomation
+from credentials import KeyringCredentialProvider
 from context import ExecutionContext
 from runner import RecipeRunner
 
@@ -26,6 +27,7 @@ class WorkerExecutionProcessor:
         page_factory: Callable,
         downloads_root: Path,
         runner=None,
+        secret_provider=None,
     ):
         if page_factory is None:
             raise ValueError("page_factory is required")
@@ -35,6 +37,7 @@ class WorkerExecutionProcessor:
         self.page_factory = page_factory
         self.downloads_root = Path(downloads_root)
         self.runner = runner or RecipeRunner()
+        self.secret_provider = secret_provider or KeyringCredentialProvider()
 
     def process_once(self) -> ProcessResult:
         execution_id = self.worker_service.claim_next()
@@ -126,6 +129,7 @@ class WorkerExecutionProcessor:
                     item.id,
                     event,
                 ),
+                secret_provider=self.secret_provider,
             )
             result = self.runner.run(recipe, context)
             now = self._now()
