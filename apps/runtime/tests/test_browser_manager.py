@@ -78,6 +78,29 @@ class BrowserManagerTests(unittest.TestCase):
         self.assertTrue(playwright.stopped)
         self.assertIsNotNone(context)
 
+
+    def test_execution_workspace_rejects_path_traversal(self):
+        browser = FakeBrowser()
+        playwright = FakePlaywright(browser)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            manager = BrowserManager(
+                headless=True,
+                temp_root=Path(tmp),
+            )
+            with patch(
+                "browser_manager.sync_playwright",
+                return_value=FakePlaywrightHandle(playwright),
+            ):
+                manager.start()
+                with self.assertRaisesRegex(
+                    Exception,
+                    "UNSAFE_EXECUTION_ID",
+                ):
+                    manager.create_context("../outside")
+
+                manager.close()
+
     def test_storage_state_is_optional_and_never_written_to_logs(self):
         browser = FakeBrowser()
         playwright = FakePlaywright(browser)
