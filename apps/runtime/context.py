@@ -15,6 +15,7 @@ class ExecutionContext:
     resolver: object | None = None
     artifacts: list[dict] = field(default_factory=list)
     current_step_id: str | None = None
+    cancellation_requested: Callable[[], bool] | None = None
 
     def __post_init__(self):
         self.downloads_dir = Path(self.downloads_dir)
@@ -40,6 +41,9 @@ class ExecutionContext:
 
     def resolve(self, value):
         return self.resolver.resolve(value)
+
+    def is_cancellation_requested(self) -> bool:
+        return bool(self.cancellation_requested and self.cancellation_requested())
 
     def checkpoint(self, *, step_id: str, step_index: int, status: str) -> None:
         self.event(
