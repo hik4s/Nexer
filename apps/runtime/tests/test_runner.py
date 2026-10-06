@@ -9,10 +9,10 @@ class FakePage:
     def locator(self, selector):
         return self
 
-    def click(self):
+    def click(self, **kwargs):
         pass
 
-    def fill(self, value):
+    def fill(self, value, **kwargs):
         pass
 
     def goto(self, url, wait_until="domcontentloaded", timeout=30000):
@@ -25,6 +25,7 @@ class RunnerTests(unittest.TestCase):
         context = ExecutionContext(
             page=FakePage(),
             variables={"name": "Kauan"},
+            downloads_dir=__import__("tempfile").mkdtemp(),
             emit=events.append,
         )
         recipe = {
