@@ -4,7 +4,7 @@ import re
 _VARIABLE_PATTERN = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
 
 
-class VariableResolutionError(ValueError):
+from credentials import CredentialResolutionError\n\n\nclass VariableResolutionError(ValueError):
     """Raised when recipe variables cannot be resolved safely."""
 
 
@@ -47,6 +47,17 @@ class VariableResolver:
             raise VariableResolutionError("MISSING_VARIABLE")
 
         value = self.values[name]
+        if declaration.get("secret"):
+            if not isinstance(value, dict) or set(value) != {"credential_ref"}:
+                raise VariableResolutionError("SECRET_VALUE_INLINE_FORBIDDEN")
+            if self.secret_provider is None:
+                raise VariableResolutionError("CREDENTIAL_PROVIDER_UNAVAILABLE")
+            reference = value.get("credential_ref")
+            try:
+                value = self.secret_provider.get(reference)
+            except CredentialResolutionError as exc:
+                raise VariableResolutionError(str(exc)) from exc
+
         expected = declaration.get("type", "string")
         if not _type_matches(value, expected):
             raise VariableResolutionError("INVALID_VARIABLE_TYPE")
