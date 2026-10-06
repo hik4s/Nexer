@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "name": "RelatPy Local Pilot",
+  "variables": {
+    "company": {
+      "type": "string",
+      "required": true,
+      "secret": false
+    }
+  },
+  "steps": [
+    {
+      "id": "open",
+      "action": "navigate",
+      "url": "{{base_url}}"
+    },
+    {
+      "id": "fill_company",
+      "action": "fill",
+      "selector": "#company",
+      "value": "{{company}}"
+    },
+    {
+      "id": "click_download",
+      "action": "click",
+      "selector": "#download"
+    },
+    {
+      "id": "download",
+      "action": "download",
+      "selector": "#download",
+      "filename": "relatpy-pilot.xlsx"
+    },
+    {
+      "id": "validate",
+      "action": "validate_file",
+      "path": "relatpy-pilot.xlsx",
+      "min_size": 1,
+      "extensions": [".xlsx"]
+    }
+  ],
+  "output": {
+    "type": "file",
+    "expected_extension": ".xlsx"
+  }
+}
