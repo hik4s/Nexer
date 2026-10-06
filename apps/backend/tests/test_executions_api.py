@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from alembic import command
@@ -92,7 +92,7 @@ class ExecutionsApiTests(unittest.TestCase):
                         "name": "piloto",
                         "steps": [],
                     },
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
             db.commit()
@@ -157,7 +157,15 @@ class ExecutionsApiTests(unittest.TestCase):
         )
 
         execution_id = response.json()["id"]
-        execution = self.session_factory
+        db = self.session_factory()
+        try:
+            stored = db.get(Execution, execution_id)
+            self.assertEqual(
+                stored.inputs,
+                {"company": "001", "period_start": "2026-10-01"},
+            )
+        finally:
+            db.close()
 
     def test_execution_rejects_unpublished_automation(self):
         db = self.session_factory()
