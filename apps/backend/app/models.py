@@ -86,6 +86,7 @@ class Execution(Base):
     keep_local_copy: Mapped[bool] = mapped_column(default=True, nullable=False)
     overwrite_existing: Mapped[bool] = mapped_column(default=False, nullable=False)
     test_mode: Mapped[bool] = mapped_column(default=False, nullable=False)
+    inputs: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
