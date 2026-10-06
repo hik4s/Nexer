@@ -73,10 +73,7 @@ class BrowserManagerTests(unittest.TestCase):
         self.assertTrue(
             browser.contexts[0]["accept_downloads"]
         )
-        self.assertEqual(
-            browser.contexts[0]["downloads_path"],
-            str(Path(tmp) / "execution-1"),
-        )
+        self.assertTrue((Path(tmp) / "execution-1").is_dir())
         self.assertTrue(browser.closed)
         self.assertTrue(playwright.stopped)
         self.assertIsNotNone(context)
