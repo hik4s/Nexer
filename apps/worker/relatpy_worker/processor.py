@@ -77,7 +77,16 @@ class WorkerExecutionProcessor:
             db.close()
 
     def _run_item(self, execution: Execution, item: ExecutionAutomation) -> None:
-        recipe = self._load_recipe(item.automation_id, item.automation_version)
+        try:
+            recipe = self._load_recipe(item.automation_id, item.automation_version)
+        except Exception as exc:
+            self._mark_failed(
+                execution.id,
+                item.id,
+                error_type=type(exc).__name__,
+                error_detail=str(exc),
+            )
+            return
 
         self._update_item(
             item.id,
@@ -85,7 +94,7 @@ class WorkerExecutionProcessor:
             stage=ExecutionStage.CREATED.value,
             attempts=item.attempts + 1,
             started_at=self._now(),
-            last_progress_at=datetime.utcnow(),
+            last_progress_at=self._now(),
         )
         self._emit(
             execution.id,
@@ -119,7 +128,7 @@ class WorkerExecutionProcessor:
                 ),
             )
             result = self.runner.run(recipe, context)
-            now = datetime.utcnow()
+            now = self._now()
 
             if result.failed_step_id is None:
                 self._update_item(
@@ -205,7 +214,7 @@ class WorkerExecutionProcessor:
         error_type: str,
         error_detail: str | None,
     ) -> None:
-        now = datetime.utcnow()
+        now = self._now()
         detail = (error_detail or "").strip()[:4000] or None
         self._update_item(
             item_id,
@@ -229,7 +238,7 @@ class WorkerExecutionProcessor:
         )
 
     def _cancel_item(self, execution_id: int, item_id: int) -> None:
-        now = datetime.utcnow()
+        now = self._now()
         self._update_item(
             item_id,
             status=ExecutionAutomationStatus.CANCELLED.value,
@@ -279,7 +288,7 @@ class WorkerExecutionProcessor:
             else:
                 status = ExecutionStatus.FAILED.value
 
-            now = datetime.utcnow()
+            now = self._now()
             execution.status = status
             execution.finished_at = now
             db.commit()
@@ -327,7 +336,7 @@ class WorkerExecutionProcessor:
         level: str = "INFO",
         update_progress: bool = False,
     ) -> None:
-        now = datetime.utcnow()
+        now = self._now()
         db = self.session_factory()
         try:
             if update_progress and item_id is not None:
