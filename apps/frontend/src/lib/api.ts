@@ -156,13 +156,6 @@ export const api = {
   getDiagnostics: () => request<DiagnosticsResponse>("/diagnostics"),
 };
 
-export function executionEventsUrl(id: number, lastEventId?: number) {
-  const url = new URL(
-    `/executions/${id}/events`,
-    API_BASE_URL,
-  );
-  if (lastEventId != null) {
-    url.searchParams.set("last_event_id", String(lastEventId));
-  }
-  return url.toString();
+export function executionEventsUrl(id: number) {
+  return new URL(`/executions/${id}/events`, API_BASE_URL).toString();
 }
