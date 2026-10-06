@@ -13,6 +13,7 @@ class ExecutionCreate(BaseModel):
     keep_local_copy: bool = True
     overwrite_existing: bool = False
     test_mode: bool = False
+    inputs: dict = Field(default_factory=dict)
 
     @field_validator("automation_ids")
     @classmethod
@@ -58,6 +59,7 @@ class ExecutionRead(BaseModel):
     keep_local_copy: bool
     overwrite_existing: bool
     test_mode: bool
+    inputs: dict
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None
