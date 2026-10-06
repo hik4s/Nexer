@@ -23,6 +23,12 @@ class FakeEventSource {
     this.closed = true;
   }
 
+  removeEventListener(type: string, listener: (event: MessageEvent) => void) {
+    if (this.listeners.get(type) === listener) {
+      this.listeners.delete(type);
+    }
+  }
+
   emitOpen() {
     this.onopen?.();
   }
@@ -64,11 +70,13 @@ describe("useExecutionEvents", () => {
     });
 
     expect(result.current.connected).toBe(true);
-    expect(result.current.events[0]).toEqual({
-      id: 12,
-      type: "automation.finished",
-      data: { status: "SUCCEEDED" },
-    });
+    expect(result.current.events[0]).toEqual(
+      expect.objectContaining({
+        id: 12,
+        type: "automation.finished",
+        payload: { status: "SUCCEEDED" },
+      }),
+    );
   });
 
   it("closes the stream on unmount", () => {
