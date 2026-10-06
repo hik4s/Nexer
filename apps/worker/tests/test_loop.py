@@ -18,12 +18,16 @@ class FakeService:
     def __init__(self):
         self.register_calls = 0
         self.heartbeat_calls = 0
+        self.stop_calls = 0
 
     def register(self):
         self.register_calls += 1
 
     def heartbeat(self):
         self.heartbeat_calls += 1
+
+    def stop(self):
+        self.stop_calls += 1
 
 
 class FakeProcessor:
@@ -66,6 +70,7 @@ class WorkerLoopTests(unittest.TestCase):
         self.assertEqual(service.register_calls, 1)
         self.assertGreaterEqual(service.heartbeat_calls, 1)
         self.assertGreaterEqual(processor.calls, 1)
+        self.assertEqual(service.stop_calls, 1)
 
 
 if __name__ == "__main__":
