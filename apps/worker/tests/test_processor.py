@@ -252,11 +252,15 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
         worker.register()
 
         runner = Mock()
-        runner.run.return_value = RunResult(
-            completed_steps=1,
-            failed_step_id=None,
-            cancelled=True,
-        )
+        def cancelled_run(_recipe, context):
+            self.assertTrue(context.is_cancellation_requested())
+            return RunResult(
+                completed_steps=1,
+                failed_step_id=None,
+                cancelled=True,
+            )
+
+        runner.run.side_effect = cancelled_run
 
         processor = WorkerExecutionProcessor(
             session_factory=self.session_factory,
