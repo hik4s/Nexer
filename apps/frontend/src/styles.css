@@ -167,3 +167,214 @@ h2 {
     grid-template-columns: 1fr;
   }
 }
+
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  overflow-x: auto;
+}
+
+.nav-link {
+  padding: 9px 11px;
+  border-radius: 9px;
+  color: #526174;
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nav-link:hover,
+.nav-link--active {
+  background: #eef3f8;
+  color: #102033;
+}
+
+.automation-list {
+  display: grid;
+  gap: 4px;
+}
+
+.automation-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.automation-row--link:hover,
+.automation-row:hover {
+  background: #f6f8fb;
+}
+
+.automation-row strong {
+  display: block;
+}
+
+.automation-row .muted {
+  margin: 4px 0 0;
+}
+
+.automation-meta,
+.event-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge,
+.connection,
+.version,
+.event-id {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: #eef3f8;
+  color: #526174;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.execution-items,
+.event-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.execution-item,
+.event-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e5eaf1;
+  border-radius: 12px;
+}
+
+.event-row {
+  justify-content: flex-start;
+}
+
+.event-row .muted {
+  margin: 4px 0 0;
+}
+
+.form-card form {
+  display: grid;
+  gap: 18px;
+}
+
+.form-card label {
+  display: grid;
+  gap: 7px;
+  color: #344256;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.form-card input,
+.form-card select,
+.form-card textarea {
+  width: 100%;
+  border: 1px solid #ccd6e2;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: #ffffff;
+  color: #102033;
+  outline: none;
+}
+
+.form-card input:focus,
+.form-card select:focus,
+.form-card textarea:focus {
+  border-color: #64748b;
+  box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.12);
+}
+
+.form-card textarea {
+  resize: vertical;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+}
+
+.form-grid,
+.checkbox-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center;
+  grid-template-columns: auto 1fr;
+  gap: 9px !important;
+  font-weight: 600 !important;
+}
+
+.checkbox-label input {
+  width: auto;
+}
+
+.form-error {
+  margin: 0;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: #fff4f4;
+  color: #a11c1c;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.primary-button {
+  justify-self: start;
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 16px;
+  background: #102033;
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.primary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+@media (max-width: 980px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px 20px;
+  }
+
+  .nav {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .form-grid,
+  .checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .automation-row,
+  .execution-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
