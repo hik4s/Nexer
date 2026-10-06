@@ -75,14 +75,16 @@ describe("NewExecutionPage", () => {
     await user.click(screen.getByRole("button", { name: "Criar execução" }));
 
     await waitFor(() => {
-      expect(api.createExecution).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: "Teste",
-          automation_ids: [4],
-          test_mode: true,
-          inputs: {},
-        }),
-      );
+      expect(api.createExecution).toHaveBeenCalled();
     });
+
+    expect(vi.mocked(api.createExecution).mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        name: "Teste",
+        automation_ids: [4],
+        test_mode: true,
+        inputs: {},
+      }),
+    );
   });
 });
