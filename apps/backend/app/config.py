@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     environment: str = "local"
     host: str = "127.0.0.1"
     port: int = 8000
+    database_url: str = "sqlite:///./data/relatpy.db"
     cors_origins: tuple[str, ...] = (
         "http://127.0.0.1:5173",
         "http://localhost:5173",
