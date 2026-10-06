@@ -65,6 +65,7 @@ class BrowserManagerTests(unittest.TestCase):
                 manager.start()
                 context = manager.create_context("execution-1")
                 manager.close()
+                self.assertTrue((Path(tmp) / "execution-1").is_dir())
 
         self.assertEqual(
             playwright.chromium.launch_calls,
@@ -73,7 +74,6 @@ class BrowserManagerTests(unittest.TestCase):
         self.assertTrue(
             browser.contexts[0]["accept_downloads"]
         )
-        self.assertTrue((Path(tmp) / "execution-1").is_dir())
         self.assertTrue(browser.closed)
         self.assertTrue(playwright.stopped)
         self.assertIsNotNone(context)
