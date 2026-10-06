@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 from playwright.sync_api import sync_playwright
 
@@ -37,7 +38,8 @@ class BrowserManager:
         if self._browser is None:
             raise BrowserManagerError("BROWSER_NOT_STARTED")
 
-        execution_root = self.temp_root / str(execution_id)
+        safe_execution_id = _safe_execution_id(execution_id)
+        execution_root = self.temp_root / safe_execution_id
         execution_root.mkdir(parents=True, exist_ok=True)
 
         options = {
@@ -81,3 +83,9 @@ class BrowserManager:
             f"BrowserManager(headless={self.headless!r}, "
             f"temp_root={str(self.temp_root)!r})"
         )
+
+def _safe_execution_id(execution_id: str | int) -> str:
+    value = str(execution_id)
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", value):
+        raise BrowserManagerError("UNSAFE_EXECUTION_ID")
+    return value
