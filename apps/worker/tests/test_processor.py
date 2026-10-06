@@ -17,6 +17,7 @@ from app.models import (
     ExecutionAutomation,
 )
 from relatpy_worker.processor import WorkerExecutionProcessor
+from runner import RunResult
 from relatpy_worker.service import WorkerService
 
 
@@ -234,6 +235,62 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
             self.assertEqual(item.stage, ExecutionStage.FINISHED.value)
             self.assertIn("worker.execution.claimed", event_types)
             self.assertIn("automation.finished", event_types)
+        finally:
+            db.close()
+
+
+    def test_processor_marks_execution_cancelled_when_runtime_stops(self):
+        execution_id = self._seed_execution()
+        worker = WorkerService(
+            session_factory=self.session_factory,
+            worker_id="cancel-worker",
+            concurrency_limit=1,
+            hostname="test-host",
+            pid=1000,
+        )
+        worker.register()
+
+        runner = __import__("unittest").mock.Mock()
+        runner.run.return_value = RunResult(
+            completed_steps=1,
+            failed_step_id=None,
+            cancelled=True,
+        )
+
+        processor = WorkerExecutionProcessor(
+            session_factory=self.session_factory,
+            worker_service=worker,
+            page_factory=lambda _execution, _item, _recipe: FakePage(),
+            downloads_root=Path(self.tmp.name) / "downloads",
+            runner=runner,
+        )
+
+        def cancellation_after_claim():
+            db = self.session_factory()
+            try:
+                execution = db.get(Execution, execution_id)
+                execution.cancel_requested = True
+                db.commit()
+            finally:
+                db.close()
+            return True
+
+        processor._execution_cancel_requested = cancellation_after_claim
+
+        result = processor.process_once()
+
+        self.assertEqual(result.status, ExecutionStatus.CANCELLED.value)
+
+        db = self.session_factory()
+        try:
+            execution = db.get(Execution, execution_id)
+            item = db.scalar(
+                select(ExecutionAutomation).where(
+                    ExecutionAutomation.execution_id == execution_id
+                )
+            )
+            self.assertEqual(execution.status, ExecutionStatus.CANCELLED.value)
+            self.assertEqual(item.status, ExecutionAutomationStatus.CANCELLED.value)
         finally:
             db.close()
 
