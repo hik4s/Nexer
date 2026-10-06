@@ -8,13 +8,14 @@ from context import ExecutionContext
 
 
 class FakeLocator:
-    def __init__(self):
+    def __init__(self, visible=True):
         self.calls = []
+        self.visible = visible
 
-    def click(self):
+    def click(self, **kwargs):
         self.calls.append(("click",))
 
-    def fill(self, value):
+    def fill(self, value, **kwargs):
         self.calls.append(("fill", value))
 
     def select_option(self, value):
@@ -25,7 +26,7 @@ class FakeLocator:
 
     def is_visible(self):
         self.calls.append(("is_visible",))
-        return True
+        return self.visible
 
 
 class FakePage:
@@ -105,8 +106,8 @@ class ActionTests(unittest.TestCase):
         self.assertGreaterEqual(len(self.events), 4)
 
     def test_wait_for_any_uses_first_available_selector(self):
-        self.page.locators["#slow"] = FakeLocator()
-        self.page.locators["#ready"] = FakeLocator()
+        self.page.locators["#slow"] = FakeLocator(visible=False)
+        self.page.locators["#ready"] = FakeLocator(visible=True)
 
         self.registry.execute(
             "wait_for_any",
