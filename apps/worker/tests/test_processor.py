@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from alembic import command
@@ -137,7 +137,7 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
                         "output": {"type": "file"},
                     },
                     test_status="PASSED",
-                    published_at=datetime.utcnow(),
+                    published_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
 
