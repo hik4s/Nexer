@@ -90,6 +90,24 @@ class Execution(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
     cancel_requested: Mapped[bool] = mapped_column(default=False, nullable=False)
+    worker_id: Mapped[str | None] = mapped_column(String(100), index=True)
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+
+class Worker(Base):
+    __tablename__ = "workers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    worker_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    hostname: Mapped[str | None] = mapped_column(String(255))
+    pid: Mapped[int | None] = mapped_column(Integer)
+    concurrency_limit: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    current_load: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    heartbeat_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    stopped_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
 
 
 class ExecutionAutomation(Base):
