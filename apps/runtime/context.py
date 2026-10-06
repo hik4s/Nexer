@@ -31,6 +31,7 @@ class ExecutionContext:
             self.resolver = VariableResolver(
                 declarations=declarations,
                 values=self.variables,
+                secret_provider=self.secret_provider,
             )
 
     def event(self, event_type: str, **payload) -> None:
