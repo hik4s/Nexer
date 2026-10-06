@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 
 import { App } from "./App";
 import { api } from "./lib/api";
@@ -20,7 +21,9 @@ function renderApp() {
 
   return render(
     <QueryClientProvider client={client}>
-      <App />
+      <MemoryRouter>
+        <App />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
