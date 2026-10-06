@@ -42,7 +42,6 @@ class BrowserManager:
 
         options = {
             "accept_downloads": True,
-            "downloads_path": str(execution_root),
         }
         if storage_state is not None:
             options["storage_state"] = str(storage_state)
