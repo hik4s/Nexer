@@ -1,6 +1,6 @@
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from alembic import command
@@ -67,8 +67,8 @@ class DiagnosticsApiTests(unittest.TestCase):
                     pid=123,
                     concurrency_limit=2,
                     current_load=1,
-                    heartbeat_at=datetime.utcnow(),
-                    started_at=datetime.utcnow(),
+                    heartbeat_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    started_at=datetime.now(timezone.utc).replace(tzinfo=None),
                 )
             )
             db.commit()
