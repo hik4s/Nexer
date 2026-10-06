@@ -12,6 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from app.database import get_db
 from app.enums import AutomationStatus
 from app.main import app
+from app.models import Execution
 from app.models import Automation, AutomationVersion
 
 
