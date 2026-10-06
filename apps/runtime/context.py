@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from resolver import VariableResolver
+
 
 @dataclass
 class ExecutionContext:
@@ -18,13 +20,24 @@ class ExecutionContext:
         self.downloads_dir = Path(self.downloads_dir)
         self.downloads_dir.mkdir(parents=True, exist_ok=True)
 
+        if self.resolver is None:
+            declarations = {
+                name: {
+                    "type": _infer_type(value),
+                    "required": True,
+                }
+                for name, value in self.variables.items()
+            }
+            self.resolver = VariableResolver(
+                declarations=declarations,
+                values=self.variables,
+            )
+
     def event(self, event_type: str, **payload) -> None:
         if self.emit is not None:
             self.emit({"type": event_type, **payload})
 
     def resolve(self, value):
-        if self.resolver is None:
-            return value
         return self.resolver.resolve(value)
 
     def checkpoint(self, *, step_id: str, step_index: int, status: str) -> None:
@@ -34,3 +47,13 @@ class ExecutionContext:
             step_index=step_index,
             status=status,
         )
+
+
+def _infer_type(value) -> str:
+    if isinstance(value, bool):
+        return "boolean"
+    if isinstance(value, int):
+        return "integer"
+    if isinstance(value, float):
+        return "number"
+    return "string"
