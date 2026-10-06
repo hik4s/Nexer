@@ -133,6 +133,32 @@ class ExecutionsApiTests(unittest.TestCase):
         self.assertEqual(fetched.json()["id"], body["id"])
         self.assertEqual(fetched.json()["items"][0]["automation_id"], automation_id)
 
+
+    def test_create_execution_persists_input_variables(self):
+        automation_id = self._create_published_automation()
+
+        response = self.client.post(
+            "/executions",
+            json={
+                "name": "Execution with inputs",
+                "automation_ids": [automation_id],
+                "inputs": {
+                    "company": "001",
+                    "period_start": "2026-10-01"
+                },
+                "test_mode": True,
+            },
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json()["inputs"],
+            {"company": "001", "period_start": "2026-10-01"},
+        )
+
+        execution_id = response.json()["id"]
+        execution = self.session_factory
+
     def test_execution_rejects_unpublished_automation(self):
         db = self.session_factory()
         try:
