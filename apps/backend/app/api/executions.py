@@ -36,6 +36,7 @@ def _to_read(execution: Execution, items: list[ExecutionAutomation]) -> Executio
         keep_local_copy=execution.keep_local_copy,
         overwrite_existing=execution.overwrite_existing,
         test_mode=execution.test_mode,
+        inputs=execution.inputs,
         created_at=execution.created_at,
         started_at=execution.started_at,
         finished_at=execution.finished_at,
@@ -116,6 +117,7 @@ def create_execution(payload: ExecutionCreate, db: Session = Depends(get_db)):
         keep_local_copy=payload.keep_local_copy,
         overwrite_existing=payload.overwrite_existing,
         test_mode=payload.test_mode,
+        inputs=payload.inputs,
         created_at=utcnow(),
         cancel_requested=False,
     )
