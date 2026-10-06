@@ -109,6 +109,8 @@ export function NewExecutionPage() {
     });
   });
 
+  const publishedAutomations = automations.data?.items ?? [];
+
   return (
     <main className="page-shell">
       <div className="page-heading">
@@ -127,7 +129,7 @@ export function NewExecutionPage() {
             <h2>Não foi possível carregar automações</h2>
             <p className="muted">Confira se a API está disponível.</p>
           </div>
-        ) : automations.data?.items.length === 0 ? (
+        ) : publishedAutomations.length === 0 ? (
           <div>
             <h2>Nenhuma automação publicada</h2>
             <p className="muted">
@@ -148,7 +150,7 @@ export function NewExecutionPage() {
               Automação
               <select {...form.register("automationId")}>
                 <option value="">Selecione…</option>
-                {automations.data.items.map((automation) => (
+                {publishedAutomations.map((automation) => (
                   <option key={automation.id} value={automation.id}>
                     {automation.code} — {automation.name}
                   </option>
