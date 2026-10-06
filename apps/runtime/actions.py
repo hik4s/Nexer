@@ -1,4 +1,5 @@
 import hashlib
+import time
 from pathlib import Path, PurePath
 
 
@@ -113,10 +114,8 @@ def _wait_for_any(step, context):
     context.event("action.started", action="wait_for_any", step_id=step["id"])
 
     if not context.dry_run:
-        deadline = context.page.timeouts if False else None
-        del deadline
-        started = __import__("time").monotonic()
-        while (__import__("time").monotonic() - started) * 1000 < timeout:
+        started = time.monotonic()
+        while (time.monotonic() - started) * 1000 < timeout:
             for selector in selectors:
                 if context.page.locator(selector).is_visible():
                     context.event(
