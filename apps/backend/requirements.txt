@@ -1,0 +1,5 @@
+# Dependencies for the new RelatPy FastAPI backend.
+# Keep isolated from the legacy root requirements during migration.
+fastapi>=0.115,<1.0
+httpx>=0.27,<1.0
+uvicorn>=0.30,<1.0
