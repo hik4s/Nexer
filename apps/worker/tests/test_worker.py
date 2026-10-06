@@ -16,6 +16,8 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2] / "backend"
 
 
 class WorkerServiceTests(unittest.TestCase):
+    _execution_seed = 0
+
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
@@ -57,11 +59,13 @@ class WorkerServiceTests(unittest.TestCase):
             db.close()
 
     def _seed_queued_execution(self):
+        type(self)._execution_seed += 1
+        seed = type(self)._execution_seed
         db = self.session_factory()
         try:
             automation = Automation(
-                code="worker-test",
-                name="Worker Test",
+                code=f"worker-test-{seed}",
+                name=f"Worker Test {seed}",
                 status="PUBLISHED",
                 current_version=1,
             )
