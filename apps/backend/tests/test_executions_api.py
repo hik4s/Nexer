@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from app.database import get_db
 from app.enums import AutomationStatus
 from app.main import app
-from app.models import Execution
+from app.models import Event, Execution
 from app.models import Automation, AutomationVersion
 
 
@@ -227,6 +227,32 @@ class ExecutionsApiTests(unittest.TestCase):
         self.assertEqual(body["status"], "CANCELLED")
         self.assertTrue(body["cancel_requested"])
         self.assertEqual(body["items"][0]["status"], "CANCELLED")
+
+    def test_cancel_queued_execution_persists_event(self):
+        automation_id = self._seed_published_automation()
+
+        created = self.client.post(
+            "/executions",
+            json={"name": "Cancelar com evento", "automation_ids": [automation_id]},
+        )
+        execution_id = created.json()["id"]
+
+        cancelled = self.client.post(f"/executions/{execution_id}/cancel")
+
+        self.assertEqual(cancelled.status_code, 200)
+
+        db = self.session_factory()
+        try:
+            events = list(
+                db.query(Event)
+                .filter(Event.execution_id == execution_id)
+                .order_by(Event.id)
+                .all()
+            )
+            self.assertEqual([event.type for event in events], ["execution.cancelled"])
+            self.assertEqual(events[0].level, "INFO")
+        finally:
+            db.close()
 
     def test_list_executions_supports_status_filter_and_pagination(self):
         automation_id = self._seed_published_automation()
