@@ -90,7 +90,7 @@ describe("DestinationsPage", () => {
       expect(api.createDestination).toHaveBeenCalledWith({
         code: "NETWORK",
         name: "Rede",
-        path_reference: "\\server\reports",
+        path_reference: networkPath,
         enabled: true,
       });
     });
