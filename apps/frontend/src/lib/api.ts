@@ -72,6 +72,30 @@ export type CreateExecutionInput = {
   inputs?: Record<string, unknown>;
 };
 
+export type Destination = {
+  id: number;
+  code: string;
+  name: string;
+  path_reference: string;
+  enabled: boolean;
+  last_test_status: string | null;
+  last_test_at: string | null;
+};
+
+export type DestinationListResponse = {
+  items: Destination[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export type CreateDestinationInput = {
+  code: string;
+  name: string;
+  path_reference: string;
+  enabled?: boolean;
+};
+
 export type DiagnosticsResponse = {
   status: string;
   database: { status: string };
@@ -154,6 +178,21 @@ export const api = {
     }),
 
   getDiagnostics: () => request<DiagnosticsResponse>("/diagnostics"),
+
+  listDestinations: (params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit != null) query.set("limit", String(params.limit));
+    if (params?.offset != null) query.set("offset", String(params.offset));
+
+    const suffix = query.toString() ? "?" + query.toString() : "";
+    return request<DestinationListResponse>(`/destinations${suffix}`);
+  },
+
+  createDestination: (input: CreateDestinationInput) =>
+    request<Destination>("/destinations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
 };
 
 export function executionEventsUrl(id: number) {
