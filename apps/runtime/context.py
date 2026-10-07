@@ -17,6 +17,7 @@ class ExecutionContext:
     artifacts: list[dict] = field(default_factory=list)
     current_step_id: str | None = None
     cancellation_requested: Callable[[], bool] | None = None
+    auth_guard: object | None = None
 
     def __post_init__(self):
         self.downloads_dir = Path(self.downloads_dir)
