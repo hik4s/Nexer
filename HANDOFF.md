@@ -21,9 +21,10 @@ A Etapa 1 já possui:
 - Edge via Playwright + Browser Manager;
 - download/validação de arquivo;
 - credenciais via keyring/credential_ref;
-- AuthenticationGuard com tentativa única;
-- frontend React/TypeScript com Dashboard, Automações, Execuções, Nova execução e Diagnóstico;
+- AuthenticationGuard com tentativa única + verificação antes dos passos;
+- frontend React/TypeScript com Dashboard, Automações, Execuções, Nova execução, Diagnóstico e Destinos;
 - piloto real Worker → Edge → download → persistência no Windows;
+- teste de Gate API → Worker → Runtime;
 - scripts de continuidade e verificação.
 
 ## Evidência
@@ -39,7 +40,7 @@ A Etapa 1 já possui:
 
 ## Trabalho em andamento
 
-1. validar CI verde da branch isolada após correção do filtro Windows;
+1. validar CI verde da branch isolada após correções do filtro Windows e harness frontend;
 2. concluir integração de autenticação real, incluindo diagnóstico e restauração de sessão autorizada;
 3. frontend de destinos;
 4. manutenção/criação de receitas pelo Studio;
