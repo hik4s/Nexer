@@ -33,7 +33,7 @@
 - snapshot da versão publicada em `execution_automations`
 - inputs parametrizados persistidos
 - SSE persistido com `Last-Event-ID`
-- destinations API inicial
+- destinations API inicial + tela frontend de Destinos
 - política de segredo: apenas `credential_ref` para variáveis secretas
 
 ### Worker
@@ -85,7 +85,7 @@
 
 ## Próximos microtasks
 
-1. fechar CI verde para a branch isolada;
+1. fechar CI verde para a branch isolada após as últimas correções do harness;
 2. integrar AuthenticationGuard ao fluxo de autenticação real;
 3. persistir/restaurar estado de sessão autorizado quando necessário;
 4. criar diagnóstico de autenticação;
