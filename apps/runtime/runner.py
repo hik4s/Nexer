@@ -42,6 +42,9 @@ class RecipeRunner:
                     cancelled=True,
                 )
 
+            if context.auth_guard is not None:
+                context.page = context.auth_guard.ensure_authenticated(context.page)
+
             context.current_step_id = step["id"]
             context.event(
                 "step.started",
