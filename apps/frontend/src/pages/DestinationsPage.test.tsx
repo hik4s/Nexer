@@ -53,6 +53,8 @@ describe("DestinationsPage", () => {
   });
 
   it("creates a destination", async () => {
+    const networkPath = String.raw`\\server\reports`;
+
     vi.mocked(api.listDestinations).mockResolvedValue({
       items: [],
       total: 0,
@@ -63,7 +65,7 @@ describe("DestinationsPage", () => {
       id: 2,
       code: "NETWORK",
       name: "Rede",
-      path_reference: "\\server\reports",
+      path_reference: networkPath,
       enabled: true,
       last_test_status: null,
       last_test_at: null,
@@ -80,7 +82,7 @@ describe("DestinationsPage", () => {
     await user.type(screen.getByLabelText("Nome"), "Rede");
     await user.type(
       screen.getByLabelText("Referência do caminho"),
-      "\\server\reports",
+      networkPath,
     );
     await user.click(screen.getByRole("button", { name: "Salvar destino" }));
 
