@@ -51,6 +51,7 @@ describe("RelatPy navigation", () => {
     expect(screen.getByRole("link", { name: "Execuções" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Nova execução" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Diagnóstico" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Destinos" })).toBeInTheDocument();
   });
 
   it("renders the executions route", () => {
