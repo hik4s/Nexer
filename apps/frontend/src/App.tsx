@@ -3,6 +3,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { AutomationsPage } from "./pages/AutomationsPage";
 import { Dashboard } from "./pages/Dashboard";
 import { DiagnosticsPage } from "./pages/DiagnosticsPage";
+import { DestinationsPage } from "./pages/DestinationsPage";
 import { ExecutionDetailPage } from "./pages/ExecutionDetailPage";
 import { ExecutionsPage } from "./pages/ExecutionsPage";
 import { NewExecutionPage } from "./pages/NewExecutionPage";
@@ -14,6 +15,7 @@ const navigation = [
   { to: "/executions", label: "Execuções" },
   { to: "/executions/new", label: "Nova execução" },
   { to: "/diagnostics", label: "Diagnóstico" },
+  { to: "/destinations", label: "Destinos" },
 ];
 
 export function App() {
@@ -51,6 +53,7 @@ export function App() {
         <Route path="/executions/new" element={<NewExecutionPage />} />
         <Route path="/executions/:id" element={<ExecutionDetailPage />} />
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
+        <Route path="/destinations" element={<DestinationsPage />} />
       </Routes>
     </div>
   );
