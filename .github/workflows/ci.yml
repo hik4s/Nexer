@@ -44,7 +44,7 @@ jobs:
       - name: Backend tests
         shell: pwsh
         env:
-          PYTHONPATH: apps/backend
+          PYTHONPATH: apps/backend;apps/worker;apps/runtime
         run: python -m unittest discover -s apps/backend/tests -v
 
       - name: Worker tests
