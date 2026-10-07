@@ -270,7 +270,7 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
             runner=runner,
         )
 
-        def cancellation_after_claim():
+        def cancellation_after_claim(_execution_id):
             db = self.session_factory()
             try:
                 execution = db.get(Execution, execution_id)
