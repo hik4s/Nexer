@@ -72,7 +72,7 @@ describe("DestinationsPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText("Novo destino")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Novo destino" })).toBeInTheDocument();
     });
 
     const user = userEvent.setup();
