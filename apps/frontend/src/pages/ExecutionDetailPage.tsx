@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 
 import { useExecutionEvents } from "../hooks/useExecutionEvents";
@@ -31,6 +31,11 @@ export function ExecutionDetailPage() {
   const stream = useExecutionEvents(
     Number.isInteger(executionId) ? executionId : null,
   );
+
+  const cancel = useMutation({
+    mutationFn: api.cancelExecution,
+    onSuccess: () => execution.refetch(),
+  });
 
   if (execution.isLoading) {
     return (
@@ -67,6 +72,16 @@ export function ExecutionDetailPage() {
         <p className="muted">
           Execução #{current.id} · {labels[current.status] ?? current.status}
         </p>
+        {current.status === "QUEUED" || current.status === "RUNNING" ? (
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => cancel.mutate(current.id)}
+            disabled={cancel.isPending}
+          >
+            {cancel.isPending ? "Cancelando…" : "Cancelar execução"}
+          </button>
+        ) : null}
       </div>
 
       <div className="grid">
