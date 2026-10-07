@@ -226,13 +226,36 @@ def cancel_execution(execution_id: int, db: Session = Depends(get_db)):
 
     execution.cancel_requested = True
     items = get_items(db, execution.id)
+    now = utcnow()
+
     if execution.status == ExecutionStatus.QUEUED.value:
         execution.status = ExecutionStatus.CANCELLED.value
-        execution.finished_at = utcnow()
+        execution.finished_at = now
         for item in items:
             item.status = ExecutionAutomationStatus.CANCELLED.value
             item.stage = ExecutionStage.CANCELLED.value
-            item.finished_at = execution.finished_at
+            item.finished_at = now
+        db.add(
+            __import__("app.models", fromlist=["Event"]).Event(
+                execution_id=execution.id,
+                type="execution.cancelled",
+                level="INFO",
+                message="execution cancelled before worker claim",
+                payload={"reason": "API_REQUEST"},
+                created_at=now,
+            )
+        )
+    else:
+        db.add(
+            __import__("app.models", fromlist=["Event"]).Event(
+                execution_id=execution.id,
+                type="execution.cancel_requested",
+                level="INFO",
+                message="execution cancellation requested",
+                payload={"reason": "API_REQUEST"},
+                created_at=now,
+            )
+        )
 
     db.commit()
     db.refresh(execution)
