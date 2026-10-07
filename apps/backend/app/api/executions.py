@@ -11,7 +11,7 @@ from app.enums import (
     ExecutionStatus,
 )
 from app.errors import ApiError
-from app.models import Automation, AutomationVersion, Execution, ExecutionAutomation, utcnow
+from app.models import Automation, AutomationVersion, Event, Execution, ExecutionAutomation, utcnow
 from app.repositories.execution import get_by_id, get_items, list_executions
 from app.schemas_execution import (
     ExecutionAutomationRead,
@@ -236,7 +236,7 @@ def cancel_execution(execution_id: int, db: Session = Depends(get_db)):
             item.stage = ExecutionStage.CANCELLED.value
             item.finished_at = now
         db.add(
-            __import__("app.models", fromlist=["Event"]).Event(
+            Event(
                 execution_id=execution.id,
                 type="execution.cancelled",
                 level="INFO",
