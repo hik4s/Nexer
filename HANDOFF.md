@@ -1,63 +1,56 @@
 # RelatPy — Handoff
 
-Este arquivo existe para permitir que um novo chat retome o desenvolvimento sem depender do histórico da conversa.
+Este arquivo é o ponto de retomada quando a conversa atual expirar.
 
-## Bootstrap obrigatório
+## Bootstrap
 
-Ao iniciar um novo chat, usar:
-
-> Continue o desenvolvimento do RelatPy a partir do estado atual do repositório `hik4s/RelatPy`. Leia `docs/development/CURRENT_STATE.md`, `HANDOFF.md`, `MASTER_PLAN.md` e consulte o GitHub/Linear/CI. Trabalhe somente na branch de desenvolvimento isolada; não altere o legado em `master`. Siga TDD para código funcional, execute os testes e só registre avanço após verificação real. Retome pelo próximo microtask descrito em CURRENT_STATE e continue até encontrar um bloqueio real.
-
-## Ordem de leitura
-
-1. `MASTER_PLAN.md`
-2. `docs/development/CURRENT_STATE.md`
-3. `HANDOFF.md`
-4. `docs/development/ROADMAP.md`
-5. `docs/development/DECISIONS.md`
-
-## Ciclo de cada microtask
-
-```text
-entender requisito
-    ↓
-escrever teste RED
-    ↓
-implementar mínimo GREEN
-    ↓
-rodar suíte relevante
-    ↓
-rodar suíte completa
-    ↓
-registrar evidência
-    ↓
-atualizar estado
-    ↓
-commit/PR
-    ↓
-próximo microtask
-```
-
-## Fonte de verdade
-
-- código: GitHub
-- planejamento: Master Plan + Linear
-- documentação: `docs/`
-- evidência de integração: GitHub Actions + testes reais
-- validação Windows/Edge: máquina Windows quando necessária
+Continue o desenvolvimento do RelatPy no repositório `hik4s/RelatPy`. Leia `MASTER_PLAN.md`, `docs/development/CURRENT_STATE.md`, `HANDOFF.md` e consulte GitHub/Linear/CI. Trabalhe exclusivamente na branch isolada da nova arquitetura e não altere o legado em `master`. Use TDD para código funcional, execute os testes e só registre avanço após verificação real.
 
 ## Estado atual
 
-O desenvolvimento está na Etapa 1. O backend base, persistência, API de automações/execuções, SSE e o núcleo inicial do Worker já existem. O próximo foco é tornar o Worker executável e construir o Runtime declarativo v1.
+Branch: `feat/etapa1-foundation`
 
-## Não fazer
+A Etapa 1 já possui:
+- FastAPI + SQLite + Alembic;
+- automations + versionamento/teste/publicação;
+- executions + cancelamento + snapshot da versão;
+- inputs parametrizados;
+- SSE persistido;
+- Worker com lifecycle, heartbeat, claim e processor;
+- Runtime declarativo v1 + ActionRegistry;
+- Edge via Playwright + Browser Manager;
+- download/validação de arquivo;
+- credenciais via keyring/credential_ref;
+- AuthenticationGuard com tentativa única;
+- frontend React/TypeScript com Dashboard, Automações, Execuções, Nova execução e Diagnóstico;
+- piloto real Worker → Edge → download → persistência no Windows;
+- scripts de continuidade e verificação.
 
-- não substituir o app legado;
-- não mover a execução operacional para nuvem;
-- não introduzir Kubernetes/Redis/Celery;
-- não usar timeout curto arbitrário como solução de resiliência;
-- não registrar credenciais/tokens/cookies em logs ou receitas.
+## Evidência
 
-## Quando a conversa expirar
+Últimas validações locais:
+- backend: 29 testes OK;
+- worker: 9 testes OK (E2E real opt-in);
+- runtime: 30 testes OK (E2E real opt-in);
+- frontend: 9 testes OK + typecheck + build;
+- cancelamento cooperativo: OK;
+- política de segredo: OK;
+- Edge real: OK.
 
-Não é necessário reconstruir o histórico. O novo chat deve consultar este arquivo, verificar a branch/CI e continuar pelo próximo item.
+## Trabalho em andamento
+
+1. validar CI verde da branch isolada após correção do filtro Windows;
+2. concluir integração de autenticação real, incluindo diagnóstico e restauração de sessão autorizada;
+3. frontend de destinos;
+4. manutenção/criação de receitas pelo Studio;
+5. watchdog, retry, checkpoints e recovery;
+6. migração controlada de automação real;
+7. gate formal da Etapa 1.
+
+## Regras
+
+- `master` é legado e não deve ser substituído;
+- nenhuma credencial/token em código, logs, fixtures ou receitas;
+- não considerar código escrito como concluído sem teste e evidência;
+- preferir desenvolvimento remoto; usar Windows/Edge real apenas quando a validação do comportamento local exigir;
+- ao final de um bloco relevante, atualizar `CURRENT_STATE.md` e este arquivo.
