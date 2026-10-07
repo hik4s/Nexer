@@ -26,6 +26,8 @@ export function useExecutionEvents(executionId: number | null) {
       "automation.finished",
       "automation.failed",
       "automation.cancelled",
+      "execution.cancel_requested",
+      "execution.cancelled",
       "execution.finished",
       "browser.close_failed",
     ];
