@@ -11,62 +11,96 @@
 - Ambiente operacional final: Windows local
 - Arquitetura alvo: React + TypeScript + Vite → FastAPI → SQLite + SSE → Worker → Runtime → Playwright/Edge
 
-## Concluído nesta branch
+## Implementado
 
-### Base e governança
-- Scaffold isolado em `apps/`
-- documentação de arquitetura inicial
-- pipeline CI Windows
-- testes smoke
+### Governança e continuidade
 - baseline de governança
+- `CURRENT_STATE.md`, `HANDOFF.md`, `ROADMAP.md`, `DECISIONS.md`
+- `scripts/handoff.ps1`
+- `scripts/verify.ps1`
+- desenvolvimento isolado do legado
 
 ### Backend
 - FastAPI mínimo
-- configuração tipada
+- health, version, metrics e diagnostics
 - erros padronizados
 - CORS de desenvolvimento
-- health/version/metrics
-- SQLAlchemy + SQLite
-- Alembic e migration inicial
+- SQLAlchemy + SQLite + FK
+- Alembic migrations `0001`, `0002`, `0003`
 - automations API
-- executions API
+- automation versions: criar/testar/publicar
+- executions API: criar/listar/consultar/cancelar
+- snapshot da versão publicada em `execution_automations`
+- inputs parametrizados persistidos
 - SSE persistido com `Last-Event-ID`
-- entidades de execução, eventos, artefatos e checkpoints
-- migration `0002_worker_registry`
+- destinations API inicial
+- política de segredo: apenas `credential_ref` para variáveis secretas
 
 ### Worker
-- pacote separado em `apps/worker`
 - registro ONLINE/OFFLINE
 - heartbeat
 - limite de concorrência
-- claim atômico de execução
-- proteção contra dupla coleta
-- metadados `worker_id` + `claimed_at`
-- evento persistido de claim
+- claim atômico com SQLite
+- processor de execução
+- integração Worker → Runtime
+- loop contínuo com shutdown controlado
+- cancelamento cooperativo
+- integração com Browser Manager
 
-## Evidência de testes
+### Runtime
+- schema de receita v1
+- resolvedor de variáveis
+- variáveis secretas via OS credential store/keyring
+- ActionRegistry
+- navigate/click/fill/select/press/wait_for/wait_for_any/switch_tab/download/validate_file
+- checkpoints e eventos
+- dry run
+- Browser Manager para Edge
+- bloqueio de path traversal em workspace
+- AuthenticationGuard com tentativa única
+- verificação de autenticação antes dos passos
+- receita de piloto reproduzível
 
-- Worker suite: 3 testes, todos OK no Windows
-- CI associado ao commit anterior da branch: sucesso confirmado
-- Toda conclusão futura deve repetir a verificação completa antes de ser registrada aqui
+### Frontend
+- Vite + TypeScript + React
+- React Query
+- React Router
+- Dashboard
+- catálogo de Automações
+- Histórico de Execuções
+- detalhe de Execução com SSE
+- Nova execução
+- Diagnóstico
+- typecheck e build
+- layout responsivo inicial
 
-## Próximo bloco obrigatório
+## Evidência local atual
 
-1. estabilizar Worker como processo executável;
-2. definir schema de receita v1;
-3. validar receita e resolver variáveis;
-4. criar ActionRegistry;
-5. implementar ações mínimas do Runtime;
-6. integrar Worker → Runtime;
-7. criar primeira receita manual;
-8. criar diagnóstico básico;
-9. fechar frontend React inicial;
-10. executar piloto de ponta a ponta.
+- Backend: 29/29 testes OK
+- Worker: 9/9 testes OK; E2E real com Edge é opt-in
+- Runtime: 30/30 testes OK; E2E real com Edge é opt-in
+- Frontend: 9/9 testes OK + typecheck + build
+- Edge real: piloto Runtime OK e fluxo Worker → Edge → download → persistência OK
+- CI: corrigindo filtro de sintaxe Windows; último run observado ainda estava processando a versão anterior
+
+## Próximos microtasks
+
+1. fechar CI verde para a branch isolada;
+2. integrar AuthenticationGuard ao fluxo de autenticação real;
+3. persistir/restaurar estado de sessão autorizado quando necessário;
+4. criar diagnóstico de autenticação;
+5. criar gestão de destinos no frontend;
+6. criar API/frontend para criação e manutenção de receitas;
+7. iniciar RelatPy Studio com editor declarativo;
+8. ampliar watchdog, retry e checkpoints;
+9. migrar uma automação real dos relatórios atuais, somente após piloto sintético estável;
+10. preparar o gate formal da Etapa 1.
 
 ## Regras de continuidade
 
 - nunca sobrescrever `master`/legado;
-- aplicar TDD em funcionalidade nova;
-- testar no Windows quando houver comportamento específico do sistema;
-- registrar evidência antes de marcar microtarefa como concluída;
-- atualizar este arquivo e `HANDOFF.md` ao fechar um bloco relevante.
+- TDD para funcionalidade nova;
+- validação Windows para comportamento específico do sistema;
+- evidência real antes de marcar microtarefa;
+- nenhuma credencial, token ou dado sensível em logs, fixtures ou receitas;
+- a conversa é interface; o repositório/Linear são a memória operacional.
