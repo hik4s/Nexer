@@ -63,10 +63,17 @@ jobs:
         shell: pwsh
         run: |
           $files = Get-ChildItem -Recurse -Filter *.py |
-            Where-Object { $_.FullName -notmatch "\(venv|.venv|build|dist|__pycache__)\ " }
+            Where-Object {
+              $_.FullName -notlike "*\\venv\\*" -and
+              $_.FullName -notlike "*\\.venv\\*" -and
+              $_.FullName -notlike "*\\build\\*" -and
+              $_.FullName -notlike "*\\dist\\*" -and
+              $_.FullName -notlike "*\\__pycache__\\*"
+            }
           if (-not $files) { throw "No Python files found." }
           foreach ($file in $files) {
             python -m py_compile $file.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Syntax check failed: $($file.FullName)" }
           }
 
       - name: Legacy smoke tests
