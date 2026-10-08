@@ -98,3 +98,13 @@ Added non-sensitive authentication configuration counters to `/diagnostics` and 
 - Integrated verification: backend 35/35, worker 11/11 (1 real Edge test skipped without opt-in), runtime 43/43 (1 real Edge test skipped without opt-in).
 - GitHub Actions run 289 for commit a1979b7 is green, including Python dependency security audit and frontend dependency audit.
 - Local pip-audit did not complete on this Windows executor; do not claim the local audit green.
+
+## Latest continuation - 2026-10-08
+
+- Remote branch confirmed: `feat/etapa1-foundation`.
+- Current remote HEAD before the Studio changes: `e76618a93d7566befc089ef63680cc2b1d1b89e2`.
+- GitHub Actions run 293 (`37821114007`) is **green** for that commit; Python and frontend jobs passed, including dependency audits.
+- Added Studio foundation: create automation → edit declarative JSON recipe → save version → test → publish.
+- Added `/studio` frontend route/navigation and API helpers.
+- Studio regression: 1/1; frontend full suite: 9 files / 15 tests; typecheck/build: OK.
+- Next recommended work remains resilience/recovery and then controlled real-automation migration, while keeping the formal E1 gate explicit.

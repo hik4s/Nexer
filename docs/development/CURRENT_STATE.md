@@ -163,3 +163,19 @@
 - Integrated verification: backend 35/35; worker 11/11 with real Edge E2E skipped unless opt-in; runtime 43/43 with real Edge E2E skipped unless opt-in.
 - GitHub Actions run 289 for commit a1979b7 completed successfully, including dependency security audit.
 - Local pip-audit execution was not completed; do not claim local Python audit green.
+
+## Studio foundation - 2026-10-08
+
+- Added `apps/frontend/src/pages/StudioPage.tsx` and its TDD regression.
+- Studio now supports creating an automation, editing a declarative recipe as JSON, saving a version, testing the version and publishing it.
+- Added frontend API helpers for automation creation and automation version lifecycle.
+- Added `/studio` route and main navigation entry.
+- Studio test: 1/1 passed.
+- Frontend full suite after the change: 9 files / 15 tests passed.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+
+## Current CI evidence - 2026-10-08
+
+- GitHub Actions `RelatPy CI` run 293 (`37821114007`) for commit `e76618a93d7566befc089ef63680cc2b1d1b89e2` completed successfully.
+- Python and frontend jobs completed successfully, including Python dependency security audit and frontend dependency audit.

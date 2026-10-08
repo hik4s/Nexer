@@ -7,6 +7,7 @@ import { DestinationsPage } from "./pages/DestinationsPage";
 import { ExecutionDetailPage } from "./pages/ExecutionDetailPage";
 import { ExecutionsPage } from "./pages/ExecutionsPage";
 import { NewExecutionPage } from "./pages/NewExecutionPage";
+import { StudioPage } from "./pages/StudioPage";
 import "./styles.css";
 
 const navigation = [
@@ -16,6 +17,7 @@ const navigation = [
   { to: "/executions/new", label: "Nova execução" },
   { to: "/diagnostics", label: "Diagnóstico" },
   { to: "/destinations", label: "Destinos" },
+  { to: "/studio", label: "Studio" },
 ];
 
 export function App() {
@@ -54,6 +56,7 @@ export function App() {
         <Route path="/executions/:id" element={<ExecutionDetailPage />} />
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
         <Route path="/destinations" element={<DestinationsPage />} />
+        <Route path="/studio" element={<StudioPage />} />
       </Routes>
     </div>
   );

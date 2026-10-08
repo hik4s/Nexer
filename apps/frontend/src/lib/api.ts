@@ -96,6 +96,37 @@ export type CreateDestinationInput = {
   enabled?: boolean;
 };
 
+export type CreateAutomationInput = {
+  code: string;
+  name: string;
+  description?: string;
+  system?: string;
+};
+
+export type AutomationVersion = {
+  id: number;
+  automation_id: number;
+  version: number;
+  recipe: Record<string, unknown>;
+  created_at: string;
+  created_by: string | null;
+  test_status: string | null;
+  published: boolean;
+  published_at: string | null;
+};
+
+export type AutomationVersionTestResponse = {
+  version: number;
+  test_status: string;
+  automation_status: string;
+};
+
+export type AutomationVersionPublishResponse = {
+  version: number;
+  published: boolean;
+  automation_status: string;
+};
+
 export type DiagnosticsResponse = {
   status: string;
   database: { status: string };
@@ -153,6 +184,34 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : "";
     return request<AutomationListResponse>(`/automations${suffix}`);
   },
+
+  createAutomation: (input: CreateAutomationInput) =>
+    request<Automation>("/automations", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+
+  createAutomationVersion: (
+    automationId: number,
+    recipe: Record<string, unknown>,
+    createdBy = "studio",
+  ) =>
+    request<AutomationVersion>(`/automations/${automationId}/versions`, {
+      method: "POST",
+      body: JSON.stringify({ recipe, created_by: createdBy }),
+    }),
+
+  testAutomationVersion: (automationId: number, version: number) =>
+    request<AutomationVersionTestResponse>(
+      `/automations/${automationId}/versions/${version}/test`,
+      { method: "POST" },
+    ),
+
+  publishAutomationVersion: (automationId: number, version: number) =>
+    request<AutomationVersionPublishResponse>(
+      `/automations/${automationId}/versions/${version}/publish`,
+      { method: "POST" },
+    ),
 
   listExecutions: (params?: {
     status?: string;
