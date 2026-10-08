@@ -24,47 +24,15 @@ def servidor_disponivel():
 
 
 def iniciar_streamlit():
+    raiz = os.path.dirname(os.path.abspath(__file__))
+    python_venv = os.path.join(raiz, "venv", "Scripts", "python.exe")
+    app_streamlit = os.path.join(raiz, "ui", "streamlit_app.py")
+    log_dir = os.path.join(raiz, "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "streamlit.log")
 
-    raiz = os.path.dirname(
-        os.path.abspath(__file__)
-    )
-
-    python_venv = os.path.join(
-        raiz,
-        "venv",
-        "Scripts",
-        "python.exe"
-    )
-
-    app_streamlit = os.path.join(
-        raiz,
-        "ui",
-        "streamlit_app.py"
-    )
-
-    log_dir = os.path.join(
-        raiz,
-        "logs"
-    )
-
-    os.makedirs(
-        log_dir,
-        exist_ok=True
-    )
-
-    log_file = os.path.join(
-        log_dir,
-        "streamlit.log"
-    )
-
-    with open(
-        log_file,
-        "a",
-        encoding="utf-8"
-    ) as log:
-
+    with open(log_file, "a", encoding="utf-8") as log:
         subprocess.Popen(
-
             [
                 python_venv,
                 "-m",
@@ -72,135 +40,69 @@ def iniciar_streamlit():
                 "run",
                 app_streamlit,
                 "--server.headless",
-                "true"
+                "true",
             ],
-
             stdout=log,
             stderr=log,
-
             creationflags=(
-                subprocess.CREATE_NO_WINDOW
-                if os.name == "nt"
-                else 0
-            )
+                subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+            ),
         )
 
 
 def aguardar_servidor(janela):
-
     inicio = time.time()
-
     while True:
-
         if servidor_disponivel():
-
-            webbrowser.open(
-                URL
-            )
-
+            webbrowser.open(URL)
             janela.destroy()
-
             return
 
         if time.time() - inicio > 120:
-
-            label_status.config(
-                text=(
-                    "Falha ao iniciar o Streamlit.\n"
-                    "Verifique logs\\streamlit.log"
-                )
-            )
-
+            janela.destroy()
             return
 
         time.sleep(1)
 
 
-# =====================================================
-# SPLASH SCREEN
-# =====================================================
-
 janela = tk.Tk()
-
 janela.title("RelatPy")
-
 janela.geometry("500x220")
 janela.resizable(False, False)
 
 largura = 500
 altura = 220
+x = (janela.winfo_screenwidth() // 2) - (largura // 2)
+y = (janela.winfo_screenheight() // 2) - (altura // 2)
 
-x = (
-    janela.winfo_screenwidth() // 2
-) - (largura // 2)
-
-y = (
-    janela.winfo_screenheight() // 2
-) - (altura // 2)
-
-janela.geometry(
-    f"{largura}x{altura}+{x}+{y}"
-)
-
-janela.configure(
-    bg="#0F172A"
-)
+janela.geometry(f"{largura}x{altura}+{x}+{y}")
+janela.configure(bg="#0F172A")
 
 titulo = tk.Label(
-
     janela,
-
     text="📊 RelatPy",
-
-    font=(
-        "Segoe UI",
-        24,
-        "bold"
-    ),
-
+    font=("Segoe UI", 24, "bold"),
     bg="#0F172A",
-
-    fg="white"
+    fg="white",
 )
-
-titulo.pack(
-    pady=(25, 10)
-)
+titulo.pack(pady=(25, 10))
 
 subtitulo = tk.Label(
-
     janela,
-
     text="Preparando ambiente...",
-
-    font=(
-        "Segoe UI",
-        12
-    ),
-
+    font=("Segoe UI", 12),
     bg="#0F172A",
-
-    fg="white"
+    fg="white",
 )
-
 subtitulo.pack()
 
 barra = tk.Label(
-
     janela,
-
     text="⏳ Carregando dependências",
-
-    font=(
-               "Segoe UI",
-        12,
-    ),
-
+    font=("Segoe UI", 12),
     bg="#0F172A",
-
     fg="white",
 )
-
 barra.pack(pady=(15, 0))
 
 Thread(
