@@ -108,3 +108,10 @@ Added non-sensitive authentication configuration counters to `/diagnostics` and 
 - Added `/studio` frontend route/navigation and API helpers.
 - Studio regression: 1/1; frontend full suite: 9 files / 15 tests; typecheck/build: OK.
 - Next recommended work remains resilience/recovery and then controlled real-automation migration, while keeping the formal E1 gate explicit.
+
+## Final evidence - Studio block - 2026-10-08
+
+- Studio implementation is pushed at `1d5bd08c6357e202865095f1936cbd1ec69aa658`.
+- GitHub Actions run 295 (`37822119458`) is green for that commit, including dependency security audits.
+- Local verification without the blocking Windows pip-audit step passed: backend 35/35, worker 11/11 (1 opt-in Edge E2E skipped), runtime 43/43 (1 opt-in Edge E2E skipped), frontend 9 files / 15 tests, typecheck and build.
+- Next priority: resilience/recovery (watchdog, retry, checkpoints, recovery) followed by controlled migration of one real report automation and the formal E1 gate.

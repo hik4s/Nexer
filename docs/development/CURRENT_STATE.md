@@ -179,3 +179,11 @@
 
 - GitHub Actions `RelatPy CI` run 293 (`37821114007`) for commit `e76618a93d7566befc089ef63680cc2b1d1b89e2` completed successfully.
 - Python and frontend jobs completed successfully, including Python dependency security audit and frontend dependency audit.
+
+## Final evidence for Studio block - 2026-10-08
+
+- Studio commit: `1d5bd08c6357e202865095f1936cbd1ec69aa658`.
+- Local `scripts/verify.ps1 -SkipAudit`: passed; backend 35/35, worker 11/11 with 1 opt-in Edge E2E skipped, runtime 43/43 with 1 opt-in Edge E2E skipped, frontend 9 files / 15 tests, typecheck and build passed.
+- Local full audit mode was stopped because the Windows `pip-audit` step remained blocked; this is a local-executor limitation, not a project failure.
+- GitHub Actions run 295 (`37822119458`) for the Studio commit completed successfully, including Python dependency security audit and frontend dependency audit.
+- Working tree was clean and local HEAD matched `origin/feat/etapa1-foundation` at `1d5bd08c6357e202865095f1936cbd1ec69aa658` before this documentation-only update.
