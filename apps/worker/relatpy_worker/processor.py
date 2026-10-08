@@ -6,7 +6,7 @@ from typing import Callable
 from sqlalchemy import select
 
 from app.enums import ExecutionAutomationStatus, ExecutionStage, ExecutionStatus
-from app.models import AutomationVersion, Event, Execution, ExecutionAutomation
+from app.models import AutomationVersion, Checkpoint, Event, Execution, ExecutionAutomation
 from auth_guard import build_auth_guard
 from credentials import KeyringCredentialProvider
 from context import ExecutionContext
@@ -357,6 +357,15 @@ class WorkerExecutionProcessor:
     def _emit_runtime_event(self, execution_id: int, item_id: int, event: dict) -> None:
         event_type = str(event.get("type", "runtime.event"))
         payload = {key: value for key, value in event.items() if key != "type"}
+
+        if event_type == "checkpoint":
+            self._persist_checkpoint(
+                item_id,
+                step_id=event.get("step_id"),
+                step_index=event.get("step_index"),
+                status=event.get("status"),
+            )
+
         self._emit(
             execution_id,
             item_id,
@@ -364,6 +373,36 @@ class WorkerExecutionProcessor:
             payload,
             update_progress=True,
         )
+
+    def _persist_checkpoint(
+        self,
+        item_id: int,
+        *,
+        step_id,
+        step_index,
+        status,
+    ) -> None:
+        if (
+            not isinstance(step_id, str)
+            or type(step_index) is not int
+            or not isinstance(status, str)
+        ):
+            return
+
+        db = self.session_factory()
+        try:
+            db.add(
+                Checkpoint(
+                    execution_automation_id=item_id,
+                    step_id=step_id,
+                    step_index=step_index,
+                    status=status,
+                    created_at=self._now(),
+                )
+            )
+            db.commit()
+        finally:
+            db.close()
 
     def _emit(
         self,

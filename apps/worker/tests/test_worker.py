@@ -4,11 +4,22 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-from app.enums import ExecutionStatus, WorkerStatus
-from app.models import Automation, AutomationVersion, Execution, ExecutionAutomation, Worker
+from app.enums import (
+    ExecutionAutomationStatus,
+    ExecutionStatus,
+    WorkerStatus,
+)
+from app.models import (
+    Automation,
+    AutomationVersion,
+    Event,
+    Execution,
+    ExecutionAutomation,
+    Worker,
+)
 from relatpy_worker.service import WorkerService
 
 
@@ -193,6 +204,178 @@ class WorkerServiceTests(unittest.TestCase):
             db.close()
 
         service.stop()
+
+    def test_recover_stale_execution_from_lost_worker(self):
+        execution_id = self._seed_queued_execution()
+        old_time = __import__("datetime").datetime(2020, 1, 1)
+
+        db = self.session_factory()
+        try:
+            worker = Worker(
+                worker_id="lost-worker",
+                status=WorkerStatus.ONLINE.value,
+                hostname="old-host",
+                pid=10,
+                concurrency_limit=1,
+                current_load=1,
+                heartbeat_at=old_time,
+                started_at=old_time,
+                stopped_at=None,
+                created_at=old_time,
+            )
+            db.add(worker)
+            db.flush()
+
+            execution = db.get(Execution, execution_id)
+            execution.status = ExecutionStatus.RUNNING.value
+            execution.worker_id = "lost-worker"
+            execution.claimed_at = old_time
+            db.commit()
+        finally:
+            db.close()
+
+        recovery = WorkerService(
+            session_factory=self.session_factory,
+            worker_id="recovery-worker",
+            concurrency_limit=1,
+            hostname="new-host",
+            pid=20,
+        )
+        recovery.register()
+
+        recovered = recovery.recover_stale_executions(stale_after_seconds=60)
+
+        self.assertEqual(recovered, 1)
+
+        db = self.session_factory()
+        try:
+            execution = db.get(Execution, execution_id)
+            item = db.scalar(
+                select(ExecutionAutomation).where(
+                    ExecutionAutomation.execution_id == execution_id
+                )
+            )
+            event = db.scalar(
+                select(Event).where(
+                    Event.execution_id == execution_id,
+                    Event.type == "worker.execution.recovered",
+                )
+            )
+            self.assertEqual(execution.status, ExecutionStatus.FAILED.value)
+            self.assertIsNone(execution.worker_id)
+            self.assertIsNone(execution.claimed_at)
+            self.assertEqual(item.status, ExecutionAutomationStatus.FAILED.value)
+            self.assertEqual(item.error_type, "WORKER_LOST")
+            self.assertIsNotNone(event)
+        finally:
+            db.close()
+
+        recovery.stop()
+
+    def test_does_not_recover_live_foreign_worker_from_stale_heartbeat(self):
+        execution_id = self._seed_queued_execution()
+        old_time = __import__("datetime").datetime(2020, 1, 1)
+
+        db = self.session_factory()
+        try:
+            db.add(
+                Worker(
+                    worker_id="live-worker",
+                    status=WorkerStatus.ONLINE.value,
+                    hostname="host",
+                    pid=__import__("os").getpid(),
+                    concurrency_limit=1,
+                    current_load=1,
+                    heartbeat_at=old_time,
+                    started_at=old_time,
+                    stopped_at=None,
+                    created_at=old_time,
+                )
+            )
+            db.flush()
+            execution = db.get(Execution, execution_id)
+            execution.status = ExecutionStatus.RUNNING.value
+            execution.worker_id = "live-worker"
+            execution.claimed_at = old_time
+            db.commit()
+        finally:
+            db.close()
+
+        recovery = WorkerService(
+            session_factory=self.session_factory,
+            worker_id="recovery-worker",
+            concurrency_limit=1,
+            hostname="new-host",
+            pid=20,
+        )
+        recovery.register()
+
+        recovered = recovery.recover_stale_executions(stale_after_seconds=60)
+
+        self.assertEqual(recovered, 0)
+
+        db = self.session_factory()
+        try:
+            execution = db.get(Execution, execution_id)
+            self.assertEqual(execution.status, ExecutionStatus.RUNNING.value)
+            self.assertEqual(execution.worker_id, "live-worker")
+        finally:
+            db.close()
+
+        recovery.stop()
+
+    def test_recover_previous_incarnation_of_same_worker(self):
+        execution_id = self._seed_queued_execution()
+        old_time = __import__("datetime").datetime(2020, 1, 1)
+
+        db = self.session_factory()
+        try:
+            worker = Worker(
+                worker_id="restarted-worker",
+                status=WorkerStatus.ONLINE.value,
+                hostname="host",
+                pid=10,
+                concurrency_limit=1,
+                current_load=1,
+                heartbeat_at=old_time,
+                started_at=old_time,
+                stopped_at=None,
+                created_at=old_time,
+            )
+            db.add(worker)
+            db.flush()
+
+            execution = db.get(Execution, execution_id)
+            execution.status = ExecutionStatus.RUNNING.value
+            execution.worker_id = "restarted-worker"
+            execution.claimed_at = old_time
+            db.commit()
+        finally:
+            db.close()
+
+        restarted = WorkerService(
+            session_factory=self.session_factory,
+            worker_id="restarted-worker",
+            concurrency_limit=1,
+            hostname="host",
+            pid=99,
+        )
+        restarted.register()
+
+        recovered = restarted.recover_stale_executions(stale_after_seconds=60)
+
+        self.assertEqual(recovered, 1)
+
+        db = self.session_factory()
+        try:
+            execution = db.get(Execution, execution_id)
+            self.assertEqual(execution.status, ExecutionStatus.FAILED.value)
+            self.assertIsNone(execution.worker_id)
+            self.assertIsNone(execution.claimed_at)
+        finally:
+            db.close()
+
+        restarted.stop()
 
 
 if __name__ == "__main__":

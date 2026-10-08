@@ -199,3 +199,17 @@
 - Runtime runner tests: 3/3; recipe validation tests: 6/6; full runtime suite: 46/46 with 1 opt-in Edge E2E skipped.
 - Integrated local verification without blocking Windows pip-audit: backend 35/35, worker 11/11 with 1 opt-in Edge E2E skipped, runtime 46/46 with 1 opt-in Edge E2E skipped, frontend 9 files / 15 tests, typecheck/build OK.
 - This microblock intentionally does not implement automatic whole-execution retry or crash recovery; those remain the next resilience increment to avoid unsafe duplicate side effects.
+
+## Resiliência/recovery — checkpoints e Worker perdido - 2026-10-08
+
+- Runtime/Worker checkpoints are now persisted in the `checkpoints` table whenever Runtime emits a `checkpoint` event.
+- Added integration coverage proving successful steps generate durable checkpoint records.
+- WorkerService now detects stale executions associated with lost Worker processes and records them as `FAILED` with safe reason `WORKER_LOST`; worker claim metadata is cleared.
+- Recovery checks both staleness and Worker process liveness, and avoids recovering a foreign Worker that is still alive even when its heartbeat is stale.
+- Recovery is invoked once during WorkerLoop startup after registration, covering previous Worker incarnations.
+- Recovery is intentionally fail-closed: it does not automatically requeue a possibly side-effecting execution. Automatic replay/resume remains a later controlled step.
+- Worker suite: 14/14 passed with 1 real Edge test skipped without opt-in.
+- Runtime suite: 46/46 passed with 1 real Edge E2E skipped without opt-in.
+- Processor checkpoint integration test: passed.
+- Frontend regression: 9 files / 15 tests; typecheck/build passed.
+- Local integrated verification reached and passed backend, worker, runtime and frontend tests; the wrapper process exceeded its execution window during the first build attempt, so frontend typecheck/build were separately rerun and completed successfully.

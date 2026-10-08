@@ -16,6 +16,7 @@ from app.models import (
     Event,
     Execution,
     ExecutionAutomation,
+    Checkpoint,
 )
 from relatpy_worker.processor import WorkerExecutionProcessor
 from runner import RunResult
@@ -75,6 +76,7 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
         db = self.session_factory()
         try:
             for table in (
+                "checkpoints",
                 "events",
                 "execution_automations",
                 "executions",
@@ -236,6 +238,22 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
             self.assertEqual(item.stage, ExecutionStage.FINISHED.value)
             self.assertIn("worker.execution.claimed", event_types)
             self.assertIn("automation.finished", event_types)
+
+            checkpoints = list(
+                db.scalars(
+                    select(Checkpoint)
+                    .where(Checkpoint.execution_automation_id == item.id)
+                    .order_by(Checkpoint.step_index)
+                ).all()
+            )
+            self.assertEqual(
+                [(checkpoint.step_id, checkpoint.step_index, checkpoint.status) for checkpoint in checkpoints],
+                [
+                    ("open", 0, "SUCCEEDED"),
+                    ("fill_start", 1, "SUCCEEDED"),
+                    ("fill_company", 2, "SUCCEEDED"),
+                ],
+            )
         finally:
             db.close()
 

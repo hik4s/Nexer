@@ -17,11 +17,16 @@ class FakeStopEvent:
 class FakeService:
     def __init__(self):
         self.register_calls = 0
+        self.recovery_calls = 0
         self.heartbeat_calls = 0
         self.stop_calls = 0
 
     def register(self):
         self.register_calls += 1
+
+    def recover_stale_executions(self):
+        self.recovery_calls += 1
+        return 1
 
     def heartbeat(self):
         self.heartbeat_calls += 1
@@ -68,6 +73,7 @@ class WorkerLoopTests(unittest.TestCase):
         loop.run(stop_event=stop_event, sleep=lambda _: None)
 
         self.assertEqual(service.register_calls, 1)
+        self.assertEqual(service.recovery_calls, 1)
         self.assertGreaterEqual(service.heartbeat_calls, 1)
         self.assertGreaterEqual(processor.calls, 1)
         self.assertEqual(service.stop_calls, 1)

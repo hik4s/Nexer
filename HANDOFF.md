@@ -125,3 +125,11 @@ Added non-sensitive authentication configuration counters to `/diagnostics` and 
 - Verified success-after-retry and hard retry limit with tests.
 - Full runtime suite: 46/46; integrated verification passed without local pip-audit; frontend 9 files / 15 tests, typecheck/build OK.
 - Next resilience increments: checkpoint persistence/resume and controlled whole-execution recovery, with care around duplicate side effects.
+
+## Latest resilience/recovery block - 2026-10-08
+
+- Added persistent Runtime checkpoints through the existing `checkpoints` table.
+- Added WorkerService stale-execution recovery with process-liveness protection and `WORKER_LOST` fail-closed semantics.
+- WorkerLoop performs recovery once after registration; previous Worker incarnations are covered.
+- Worker: 14/14; Runtime: 46/46; Frontend: 9 files / 15 tests; typecheck/build OK.
+- The automatic whole-execution replay path is intentionally not implemented yet because unsafe duplicate side effects must be handled explicitly.

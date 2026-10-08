@@ -30,6 +30,7 @@ class WorkerLoop:
 
     def run(self, *, stop_event: Event, sleep=time.sleep):
         self.service.register()
+        self.service.recover_stale_executions()
         self._ticks = 0
 
         try:
