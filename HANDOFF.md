@@ -133,3 +133,12 @@ Added non-sensitive authentication configuration counters to `/diagnostics` and 
 - WorkerLoop performs recovery once after registration; previous Worker incarnations are covered.
 - Worker: 14/14; Runtime: 46/46; Frontend: 9 files / 15 tests; typecheck/build OK.
 - The automatic whole-execution replay path is intentionally not implemented yet because unsafe duplicate side effects must be handled explicitly.
+
+## Latest resilience block - watchdog - 2026-10-08
+
+- Added a background Worker maintenance loop with configurable 5s default interval.
+- Heartbeat and stale-execution recovery now continue during long-running automations instead of waiting for `process_once()` to return.
+- Recovery remains conservative: live foreign processes are not recovered from heartbeat staleness alone, and lost executions are failed with `WORKER_LOST` instead of auto-replayed.
+- Worker suite: 15/15; Runtime: 46/46; Backend: 35/35; Frontend: 9 files / 15 tests; typecheck/build OK.
+- Local integrated verification passed with `scripts/verify.ps1 -SkipAudit`; local `pip-audit` is still not used as a green signal because the Windows executor can block there.
+- Next priority: controlled manual whole-execution retry/resume semantics with explicit side-effect/replay safeguards, then real automation migration and formal E1 gate.

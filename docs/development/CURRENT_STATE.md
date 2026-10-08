@@ -213,3 +213,15 @@
 - Processor checkpoint integration test: passed.
 - Frontend regression: 9 files / 15 tests; typecheck/build passed.
 - Local integrated verification reached and passed backend, worker, runtime and frontend tests; the wrapper process exceeded its execution window during the first build attempt, so frontend typecheck/build were separately rerun and completed successfully.
+
+## Watchdog de manutenção do Worker - 2026-10-08
+
+- WorkerLoop now starts a daemon maintenance thread after registration.
+- Maintenance interval is configurable and defaults to 5 seconds; invalid non-positive intervals are rejected.
+- During long-running processor calls, maintenance keeps the Worker heartbeat fresh and periodically invokes stale-execution recovery.
+- Existing tick-based heartbeat remains in place for backward compatibility.
+- Maintenance failures are logged and do not terminate a running automation; shutdown stops and joins the maintenance thread before Worker OFFLINE.
+- Added a deterministic long-running execution test proving heartbeat/recovery continue while `process_once()` is blocked.
+- Worker suite after watchdog: 15/15 tests passed, with the real Edge E2E remaining opt-in.
+- Integrated verification after watchdog: backend 35/35, worker 15/15, runtime 46/46, frontend 9 files / 15 tests, typecheck/build OK.
+- The watchdog remains fail-closed: it does not replay or requeue side-effecting executions automatically.

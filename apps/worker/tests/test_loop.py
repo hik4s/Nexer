@@ -1,3 +1,5 @@
+import threading
+import time
 import unittest
 
 
@@ -76,6 +78,47 @@ class WorkerLoopTests(unittest.TestCase):
         self.assertEqual(service.recovery_calls, 1)
         self.assertGreaterEqual(service.heartbeat_calls, 1)
         self.assertGreaterEqual(processor.calls, 1)
+        self.assertEqual(service.stop_calls, 1)
+
+    def test_maintenance_keeps_heartbeat_alive_during_long_execution(self):
+        service = FakeService()
+
+        class BlockingProcessor:
+            def __init__(self):
+                self.started = threading.Event()
+                self.release = threading.Event()
+
+            def process_once(self):
+                self.started.set()
+                self.release.wait(timeout=2)
+                return {"status": "IDLE"}
+
+        processor = BlockingProcessor()
+        loop = WorkerLoop(
+            service=service,
+            processor=processor,
+            heartbeat_every_ticks=100,
+            maintenance_interval=0.02,
+        )
+        stop_event = FakeStopEvent(stop_after_checks=2)
+
+        runner = threading.Thread(
+            target=loop.run,
+            kwargs={"stop_event": stop_event, "sleep": lambda _: None},
+        )
+        runner.start()
+
+        self.assertTrue(processor.started.wait(timeout=1))
+        deadline = time.monotonic() + 1
+        while time.monotonic() < deadline and service.heartbeat_calls < 1:
+            time.sleep(0.01)
+
+        processor.release.set()
+        runner.join(timeout=2)
+
+        self.assertFalse(runner.is_alive())
+        self.assertGreaterEqual(service.heartbeat_calls, 1)
+        self.assertGreaterEqual(service.recovery_calls, 2)
         self.assertEqual(service.stop_calls, 1)
 
 
