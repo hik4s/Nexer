@@ -74,3 +74,9 @@ A Etapa 1 já possui:
 - Real Edge Runtime pilot + Worker E2E: 2/2 passed.
 - Authentication foundation now restores/persists Playwright session state through OS keyring and supports controlled form renewal without exposing secrets.
 - Python `pip-audit` was attempted but did not complete; keep security audit open until CI/local audit finishes.
+
+## CI blocker found and fixed - 2026-10-08
+
+- CI run 281 exposed a pre-existing syntax error in the legacy `splash.py` (truncated file).
+- The missing splash/bootstrap tail was restored on the feature branch.
+- Exact CI-style syntax check now passes for 98 Python files; legacy smoke remains 4/4.

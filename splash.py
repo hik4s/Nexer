@@ -192,4 +192,22 @@ barra = tk.Label(
     text="⏳ Carregando dependências",
 
     font=(
-       
+               "Segoe UI",
+        12,
+    ),
+
+    bg="#0F172A",
+
+    fg="white",
+)
+
+barra.pack(pady=(15, 0))
+
+Thread(
+    target=aguardar_servidor,
+    args=(janela,),
+    daemon=True,
+).start()
+
+iniciar_streamlit()
+janela.mainloop()

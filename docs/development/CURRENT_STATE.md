@@ -132,3 +132,11 @@
 - Authentication foundation completed: OS keyring session state, reusable session restoration, generic form renewal, auth guard integration in Worker/Runtime, and session persistence after successful execution.
 - Security property: session/credential values are not written to SQLite/logs/error messages.
 - `pip-audit` was started but did not finish within the Windows executor window; do not treat Python dependency audit as green yet.
+
+## CI blocker found and fixed - 2026-10-08
+
+- GitHub Actions run 281 reached Python syntax validation and exposed a pre-existing truncated `splash.py` file.
+- Local reproduction matched CI: `SyntaxError: '(' was never closed` at `splash.py:194`.
+- Restored the missing splash label/bootstrap tail without changing the new architecture.
+- Exact CI-style syntax validation now passes for 98 Python files.
+- Legacy smoke tests: 4/4 passed.
