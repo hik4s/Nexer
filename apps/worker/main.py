@@ -8,6 +8,7 @@ from threading import Event
 
 from app.database import SessionLocal
 from browser_manager import BrowserManager
+from session_store import SessionStateStore
 from relatpy_worker.loop import WorkerLoop
 from relatpy_worker.processor import WorkerExecutionProcessor
 from relatpy_worker.service import WorkerService
@@ -33,9 +34,15 @@ def build_worker(*, browser_manager: BrowserManager | None = None) -> WorkerApp:
     )
     manager.start()
 
-    def page_factory(execution, item, _recipe):
+    session_store = SessionStateStore()
+
+    def page_factory(execution, item, recipe):
+        authentication = recipe.get("authentication") or {}
+        session_ref = authentication.get("session_ref")
+        storage_state = session_store.load(session_ref) if session_ref else None
         return manager.create_page(
             f"{execution.id}-{item.id}",
+            storage_state=storage_state,
         )
 
     service = WorkerService(
@@ -49,6 +56,7 @@ def build_worker(*, browser_manager: BrowserManager | None = None) -> WorkerApp:
         worker_service=service,
         page_factory=page_factory,
         downloads_root=downloads_root,
+        session_state_store=session_store,
     )
     loop = WorkerLoop(
         service=service,

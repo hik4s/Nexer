@@ -38,7 +38,7 @@ class BrowserManager:
         self,
         execution_id: str | int,
         *,
-        storage_state: str | Path | None = None,
+        storage_state: str | Path | dict | None = None,
     ):
         if self._browser is None:
             raise BrowserManagerError("BROWSER_NOT_STARTED")
@@ -62,7 +62,7 @@ class BrowserManager:
         self,
         execution_id: str | int,
         *,
-        storage_state: str | Path | None = None,
+        storage_state: str | Path | dict | None = None,
     ):
         context = self.create_context(
             execution_id,
@@ -117,6 +117,9 @@ class BrowserPageHandle:
 
     def close(self) -> None:
         self._context.close()
+
+    def storage_state(self, **kwargs):
+        return self._context.storage_state(**kwargs)
 
     @property
     def raw_page(self):

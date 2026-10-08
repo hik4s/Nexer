@@ -7,9 +7,11 @@ from sqlalchemy import select
 
 from app.enums import ExecutionAutomationStatus, ExecutionStage, ExecutionStatus
 from app.models import AutomationVersion, Event, Execution, ExecutionAutomation
+from auth_guard import build_auth_guard
 from credentials import KeyringCredentialProvider
 from context import ExecutionContext
 from runner import RecipeRunner
+from session_store import SessionStateStore
 
 
 @dataclass(frozen=True)
@@ -28,6 +30,7 @@ class WorkerExecutionProcessor:
         downloads_root: Path,
         runner=None,
         secret_provider=None,
+        session_state_store=None,
     ):
         if page_factory is None:
             raise ValueError("page_factory is required")
@@ -38,6 +41,7 @@ class WorkerExecutionProcessor:
         self.downloads_root = Path(downloads_root)
         self.runner = runner or RecipeRunner()
         self.secret_provider = secret_provider or KeyringCredentialProvider()
+        self.session_state_store = session_state_store or SessionStateStore()
 
     def process_once(self) -> ProcessResult:
         execution_id = self.worker_service.claim_next()
@@ -133,6 +137,10 @@ class WorkerExecutionProcessor:
                 cancellation_requested=lambda: self._execution_cancel_requested(
                     execution.id
                 ),
+                auth_guard=build_auth_guard(
+                    recipe.get("authentication"),
+                    credential_provider=self.secret_provider,
+                ),
             )
             result = self.runner.run(recipe, context)
             now = self._now()
@@ -140,6 +148,7 @@ class WorkerExecutionProcessor:
             if result.cancelled:
                 self._cancel_item(execution.id, item.id)
             elif result.failed_step_id is None:
+                self._persist_session_state(recipe, page)
                 self._update_item(
                     item.id,
                     status=ExecutionAutomationStatus.SUCCEEDED.value,
@@ -187,6 +196,18 @@ class WorkerExecutionProcessor:
                         level="WARNING",
                     )
 
+
+    def _persist_session_state(self, recipe: dict, page) -> None:
+        authentication = recipe.get("authentication") or {}
+        reference = authentication.get("session_ref")
+        if not reference:
+            return
+
+        storage_state = getattr(page, "storage_state", None)
+        if not callable(storage_state):
+            raise RuntimeError("SESSION_STATE_UNAVAILABLE")
+
+        self.session_state_store.save(reference, storage_state())
 
     def _execution_cancel_requested(self, execution_id: int) -> bool:
         db = self.session_factory()

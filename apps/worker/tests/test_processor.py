@@ -342,5 +342,64 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
             db.close()
 
 
+    def test_processor_builds_auth_guard_and_persists_session_state(self):
+        execution_id = self._seed_execution()
+        db = self.session_factory()
+        try:
+            version = db.scalar(select(AutomationVersion))
+            version.recipe = {
+                **version.recipe,
+                "authentication": {
+                    "session_ref": "portal-a",
+                    "login_selectors": ["#login"],
+                },
+            }
+            db.commit()
+        finally:
+            db.close()
+
+        page = Mock()
+        page.storage_state.return_value = {"cookies": [], "origins": []}
+
+        worker = WorkerService(
+            session_factory=self.session_factory,
+            worker_id="auth-worker",
+            concurrency_limit=1,
+            hostname="test-host",
+            pid=1001,
+        )
+        worker.register()
+
+        session_store = Mock()
+        runner = Mock()
+        runner.run.return_value = RunResult(
+            completed_steps=1,
+            failed_step_id=None,
+            error=None,
+            cancelled=False,
+        )
+
+        processor = WorkerExecutionProcessor(
+            session_factory=self.session_factory,
+            worker_service=worker,
+            page_factory=lambda *_args: page,
+            downloads_root=Path(self.tmp.name) / "downloads",
+            runner=runner,
+            session_state_store=session_store,
+        )
+
+        result = processor.process_once()
+
+        self.assertEqual(result.status, ExecutionStatus.SUCCEEDED.value)
+        context = runner.run.call_args.args[1]
+        self.assertIsNotNone(context.auth_guard)
+        session_store.save.assert_called_once_with(
+            "portal-a",
+            {"cookies": [], "origins": []},
+        )
+        worker.stop()
+
+
+
 if __name__ == "__main__":
     unittest.main()

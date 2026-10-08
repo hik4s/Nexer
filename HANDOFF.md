@@ -65,3 +65,12 @@ A Etapa 1 já possui:
 - Frontend typecheck and production build: OK.
 - Commit pushed: `328624db3c17d809584b2ade0e5beeaa9dc7eee9`.
 - GitHub Actions run 277 is still in progress.
+
+## Latest dependency/auth verification - 2026-10-08
+
+- Local `.venv` created and all declared Python dependencies installed successfully; `pip check` passed.
+- Frontend dependencies installed; lockfile generated; npm audit: 0 high-severity vulnerabilities found.
+- Backend 31/31, Worker 11/11, Runtime 39/39, legacy smoke 4/4 passed.
+- Real Edge Runtime pilot + Worker E2E: 2/2 passed.
+- Authentication foundation now restores/persists Playwright session state through OS keyring and supports controlled form renewal without exposing secrets.
+- Python `pip-audit` was attempted but did not complete; keep security audit open until CI/local audit finishes.

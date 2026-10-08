@@ -117,3 +117,18 @@
 - Fix committed and pushed as `328624db3c17d809584b2ade0e5beeaa9dc7eee9`.
 - GitHub Actions run 277 is currently in progress; do not treat CI as green until it finishes.
 - Local clone used for validation: `C:\Users\kis\Downloads\RelatPy-Next-Git`.
+
+## Latest dependency/auth verification - 2026-10-08
+
+- Created local `.venv` (ignored by Git) with Python 3.12.
+- Installed legacy `Requisitos.txt`, backend and runtime dependencies; `pip check` passed.
+- Installed frontend dependencies with `npm install`; `package-lock.json` generated and `node_modules/` is now ignored.
+- Frontend: 7 test files / 12 tests passed; typecheck passed; production build passed; `npm audit --audit-level=high` reported 0 vulnerabilities.
+- Backend: 31/31 tests passed.
+- Worker: 11 tests passed; real Edge E2E remains opt-in in the full suite.
+- Runtime: 39 tests passed; real Edge E2E remains opt-in in the full suite.
+- Legacy smoke: 4/4 passed.
+- Real Edge E2E: Runtime pilot + Worker chain 2/2 passed in 11.3s.
+- Authentication foundation completed: OS keyring session state, reusable session restoration, generic form renewal, auth guard integration in Worker/Runtime, and session persistence after successful execution.
+- Security property: session/credential values are not written to SQLite/logs/error messages.
+- `pip-audit` was started but did not finish within the Windows executor window; do not treat Python dependency audit as green yet.

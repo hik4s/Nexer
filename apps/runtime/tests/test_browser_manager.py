@@ -119,6 +119,9 @@ class BrowserManagerTests(unittest.TestCase):
             def close(self):
                 self.closed = True
 
+            def storage_state(self):
+                return {"cookies": [], "origins": []}
+
         context = FakeContext()
         browser.new_context = lambda **_kwargs: context
 
@@ -133,6 +136,7 @@ class BrowserManagerTests(unittest.TestCase):
             ):
                 manager.start()
                 handle = manager.create_page("execution-3")
+                self.assertEqual(handle.storage_state(), {"cookies": [], "origins": []})
                 handle.close()
                 manager.close()
 
