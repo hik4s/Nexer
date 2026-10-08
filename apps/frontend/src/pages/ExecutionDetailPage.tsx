@@ -33,7 +33,7 @@ export function ExecutionDetailPage() {
   );
 
   const cancel = useMutation({
-    mutationFn: api.cancelExecution,
+    mutationFn: (id: number) => api.cancelExecution(id),
     onSuccess: () => execution.refetch(),
   });
 

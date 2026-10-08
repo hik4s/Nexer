@@ -25,7 +25,7 @@ Write-Host "Commit: $((git rev-parse HEAD).Trim())"
 
 Invoke-Checked python -m pip check
 
-$env:PYTHONPATH = "$root\apps\backend"
+$env:PYTHONPATH = "$root\apps\backend;$root\apps\worker;$root\apps\runtime"
 Invoke-Checked python -m unittest discover -s apps\backend\tests -v
 
 $env:PYTHONPATH = "$root\apps\worker;$root\apps\backend;$root\apps\runtime"

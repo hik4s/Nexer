@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { api } from "../lib/api";
+import { api, type CreateDestinationInput } from "../lib/api";
 
 export function DestinationsPage() {
   const queryClient = useQueryClient();
@@ -19,7 +19,7 @@ export function DestinationsPage() {
   });
 
   const mutation = useMutation({
-    mutationFn: api.createDestination,
+    mutationFn: (input: CreateDestinationInput) => api.createDestination(input),
     onSuccess: () => {
       setForm({ code: "", name: "", path_reference: "" });
       setError(null);
