@@ -66,6 +66,7 @@ def validate_recipe(recipe: dict) -> dict:
             raise RecipeValidationError(f"UNKNOWN_ACTION:{action}")
 
         _validate_step_requirements(action, step)
+        _validate_retry(step)
 
         for value in step.values():
             for variable in _find_variables(value):
@@ -131,6 +132,22 @@ def _validate_authentication(authentication: dict) -> None:
 
     if not renewal["login_url"].startswith(("http://", "https://")):
         raise RecipeValidationError("AUTH_RENEWAL_CONFIG_INVALID")
+
+
+def _validate_retry(step: dict) -> None:
+    retry = step.get("retry")
+    if retry is None:
+        return
+    if not isinstance(retry, dict):
+        raise RecipeValidationError("RETRY_CONFIG_INVALID")
+
+    max_attempts = retry.get("max_attempts", 1)
+    backoff_ms = retry.get("backoff_ms", 0)
+
+    if type(max_attempts) is not int or not 1 <= max_attempts <= 5:
+        raise RecipeValidationError("RETRY_MAX_ATTEMPTS_INVALID")
+    if type(backoff_ms) is not int or not 0 <= backoff_ms <= 60000:
+        raise RecipeValidationError("RETRY_BACKOFF_INVALID")
 
 
 def _validate_step_requirements(action: str, step: dict) -> None:

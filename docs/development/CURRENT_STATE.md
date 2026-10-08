@@ -187,3 +187,15 @@
 - Local full audit mode was stopped because the Windows `pip-audit` step remained blocked; this is a local-executor limitation, not a project failure.
 - GitHub Actions run 295 (`37822119458`) for the Studio commit completed successfully, including Python dependency security audit and frontend dependency audit.
 - Working tree was clean and local HEAD matched `origin/feat/etapa1-foundation` at `1d5bd08c6357e202865095f1936cbd1ec69aa658` before this documentation-only update.
+
+## Resiliência — retry por passo - 2026-10-08
+
+- Added explicit per-step retry policy to Runtime v1.
+- Recipe steps may define `retry.max_attempts` (1-5) and `retry.backoff_ms` (0-60000).
+- Default remains one attempt, preserving existing behavior when `retry` is absent.
+- Runtime emits `step.retrying` before a new attempt.
+- Cancellation is checked before retry backoff and returns `CANCELLED` instead of continuing.
+- Retry count is bounded and validated; invalid limits are rejected by recipe validation.
+- Runtime runner tests: 3/3; recipe validation tests: 6/6; full runtime suite: 46/46 with 1 opt-in Edge E2E skipped.
+- Integrated local verification without blocking Windows pip-audit: backend 35/35, worker 11/11 with 1 opt-in Edge E2E skipped, runtime 46/46 with 1 opt-in Edge E2E skipped, frontend 9 files / 15 tests, typecheck/build OK.
+- This microblock intentionally does not implement automatic whole-execution retry or crash recovery; those remain the next resilience increment to avoid unsafe duplicate side effects.

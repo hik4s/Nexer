@@ -108,6 +108,27 @@ class RecipeValidationTests(unittest.TestCase):
 
         self.assertIn("SELECTOR_REQUIRED", str(raised.exception))
 
+    def test_retry_policy_is_bounded(self):
+        recipe = {
+            "schema_version": 1,
+            "name": "Retry",
+            "variables": {},
+            "steps": [
+                {
+                    "id": "click",
+                    "action": "click",
+                    "selector": "#ready",
+                    "retry": {"max_attempts": 6, "backoff_ms": 0},
+                }
+            ],
+            "output": {"type": "file"},
+        }
+
+        with self.assertRaises(RecipeValidationError) as raised:
+            validate_recipe(recipe)
+
+        self.assertIn("RETRY_MAX_ATTEMPTS_INVALID", str(raised.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

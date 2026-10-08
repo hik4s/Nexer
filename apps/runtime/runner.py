@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import time
 
 from actions import ActionExecutionError, create_default_registry
 from recipe import validate_recipe
@@ -53,9 +54,47 @@ class RecipeRunner:
                 action=step["action"],
             )
 
-            try:
-                self.registry.execute(step["action"], step, context)
-            except Exception as exc:
+            retry = step.get("retry") or {}
+            max_attempts = retry.get("max_attempts", 1)
+            backoff_ms = retry.get("backoff_ms", 0)
+            step_succeeded = False
+            last_error: Exception | None = None
+
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    self.registry.execute(step["action"], step, context)
+                    step_succeeded = True
+                    break
+                except Exception as exc:
+                    last_error = exc
+                    if attempt >= max_attempts:
+                        break
+
+                    context.event(
+                        "step.retrying",
+                        step_id=step["id"],
+                        step_index=index,
+                        attempt=attempt,
+                        next_attempt=attempt + 1,
+                        error_type=type(exc).__name__,
+                    )
+
+                    if context.is_cancellation_requested():
+                        context.checkpoint(
+                            step_id=step["id"],
+                            step_index=index,
+                            status="CANCELLED",
+                        )
+                        return RunResult(
+                            completed_steps=completed,
+                            failed_step_id=None,
+                            cancelled=True,
+                        )
+
+                    if backoff_ms:
+                        time.sleep(backoff_ms / 1000)
+
+            if not step_succeeded:
                 context.checkpoint(
                     step_id=step["id"],
                     step_index=index,
@@ -65,12 +104,12 @@ class RecipeRunner:
                     "step.failed",
                     step_id=step["id"],
                     step_index=index,
-                    error_type=type(exc).__name__,
+                    error_type=type(last_error).__name__ if last_error else "RUNTIME_ERROR",
                 )
                 return RunResult(
                     completed_steps=completed,
                     failed_step_id=step["id"],
-                    error=str(exc),
+                    error=str(last_error) if last_error else "RUNTIME_ERROR",
                 )
 
             completed += 1

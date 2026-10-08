@@ -115,3 +115,13 @@ Added non-sensitive authentication configuration counters to `/diagnostics` and 
 - GitHub Actions run 295 (`37822119458`) is green for that commit, including dependency security audits.
 - Local verification without the blocking Windows pip-audit step passed: backend 35/35, worker 11/11 (1 opt-in Edge E2E skipped), runtime 43/43 (1 opt-in Edge E2E skipped), frontend 9 files / 15 tests, typecheck and build.
 - Next priority: resilience/recovery (watchdog, retry, checkpoints, recovery) followed by controlled migration of one real report automation and the formal E1 gate.
+
+## Resilience microblock - 2026-10-08
+
+- Implemented bounded, explicit per-step retry policy in Runtime v1.
+- Syntax: `retry: { "max_attempts": 2, "backoff_ms": 500 }` on a recipe step.
+- `max_attempts` is limited to 1-5 and `backoff_ms` to 0-60000.
+- Default is one attempt; existing recipes keep current behavior.
+- Verified success-after-retry and hard retry limit with tests.
+- Full runtime suite: 46/46; integrated verification passed without local pip-audit; frontend 9 files / 15 tests, typecheck/build OK.
+- Next resilience increments: checkpoint persistence/resume and controlled whole-execution recovery, with care around duplicate side effects.
