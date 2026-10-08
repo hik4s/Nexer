@@ -74,6 +74,10 @@ def validate_recipe(recipe: dict) -> dict:
                         f"UNDECLARED_VARIABLE:{variable}"
                     )
 
+    authentication = normalized.get("authentication")
+    if authentication is not None:
+        _validate_authentication(authentication)
+
     expected_extension = output.get("expected_extension")
     if expected_extension is not None:
         if (
@@ -83,6 +87,50 @@ def validate_recipe(recipe: dict) -> dict:
             raise RecipeValidationError("INVALID_EXPECTED_EXTENSION")
 
     return normalized
+
+
+def _validate_authentication(authentication: dict) -> None:
+    if not isinstance(authentication, dict):
+        raise RecipeValidationError("AUTHENTICATION_CONFIG_INVALID")
+
+    session_ref = authentication.get("session_ref")
+    if session_ref is not None:
+        if not isinstance(session_ref, str) or not re.fullmatch(
+            r"[A-Za-z0-9_.:-]{1,200}",
+            session_ref,
+        ):
+            raise RecipeValidationError("INVALID_SESSION_REFERENCE")
+
+    login_selectors = authentication.get("login_selectors")
+    if (
+        not isinstance(login_selectors, list)
+        or not login_selectors
+        or not all(isinstance(item, str) and item.strip() for item in login_selectors)
+    ):
+        raise RecipeValidationError("AUTH_LOGIN_SELECTORS_REQUIRED")
+
+    renewal = authentication.get("renewal")
+    if renewal is None:
+        return
+    if not isinstance(renewal, dict):
+        raise RecipeValidationError("AUTH_RENEWAL_CONFIG_INVALID")
+
+    required = (
+        "login_url",
+        "username_selector",
+        "password_selector",
+        "submit_selector",
+        "success_selector",
+        "username_ref",
+        "password_ref",
+    )
+    for key in required:
+        value = renewal.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise RecipeValidationError("AUTH_RENEWAL_CONFIG_INVALID")
+
+    if not renewal["login_url"].startswith(("http://", "https://")):
+        raise RecipeValidationError("AUTH_RENEWAL_CONFIG_INVALID")
 
 
 def _validate_step_requirements(action: str, step: dict) -> None:
