@@ -45,6 +45,15 @@ export function DiagnosticsPage() {
               Total registrado: {diagnostics.data?.workers.total}
             </p>
           </section>
+          <section className="card">
+            <p className="eyebrow">Autenticação</p>
+            <h2>
+              {diagnostics.data?.authentication.configured} receitas configuradas
+            </h2>
+            <p className="muted">
+              {diagnostics.data?.authentication.renewal_configured} com renovação
+            </p>
+          </section>
         </div>
       )}
     </main>

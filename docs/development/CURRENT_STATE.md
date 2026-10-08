@@ -140,3 +140,12 @@
 - Restored the missing splash label/bootstrap tail without changing the new architecture.
 - Exact CI-style syntax validation now passes for 98 Python files.
 - Legacy smoke tests: 4/4 passed.
+
+## Authentication diagnostics - 2026-10-08
+
+- Extended `/diagnostics` with non-sensitive authentication configuration counts.
+- Reports the number of recipe versions with authentication configured and the number with form renewal configured.
+- Frontend Diagnostics page now displays those counters.
+- Backend diagnostics tests: 32/32 passed in the full backend suite.
+- Frontend diagnostics regression: 1/1 passed.
+- Legacy splash syntax is valid on the current feature branch; CI run 281 failure was from the older pull-request merge result before the splash fix.

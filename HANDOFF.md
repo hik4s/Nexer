@@ -80,3 +80,7 @@ A Etapa 1 já possui:
 - CI run 281 exposed a pre-existing syntax error in the legacy `splash.py` (truncated file).
 - The missing splash/bootstrap tail was restored on the feature branch.
 - Exact CI-style syntax check now passes for 98 Python files; legacy smoke remains 4/4.
+
+## Authentication diagnostics - 2026-10-08
+
+Added non-sensitive authentication configuration counters to `/diagnostics` and surfaced them in the frontend. Backend full suite is 32/32; runtime 43/43, worker 11/11, legacy smoke 4/4; frontend targeted diagnostic test 1/1.

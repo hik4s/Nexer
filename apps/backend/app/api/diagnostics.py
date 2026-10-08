@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.database import get_db
 from app.enums import WorkerStatus
-from app.models import Worker
+from app.models import AutomationVersion, Worker
 
 
 router = APIRouter(tags=["Diagnostics"])
@@ -25,6 +25,7 @@ def diagnostics(db: Session = Depends(get_db)):
             )
             or 0
         )
+        authentication = _authentication_diagnostics(db)
         database = {"status": "ok"}
     except Exception:
         database = {"status": "error"}
@@ -35,6 +36,10 @@ def diagnostics(db: Session = Depends(get_db)):
                 "online": 0,
                 "total": 0,
             },
+            "authentication": {
+                "configured": 0,
+                "renewal_configured": 0,
+            },
         }
 
     return {
@@ -44,4 +49,25 @@ def diagnostics(db: Session = Depends(get_db)):
             "online": online_workers,
             "total": total_workers,
         },
+        "authentication": authentication,
+    }
+
+
+def _authentication_diagnostics(db: Session) -> dict[str, int]:
+    configured = 0
+    renewal_configured = 0
+
+    for recipe in db.scalars(select(AutomationVersion.recipe)).all():
+        if not isinstance(recipe, dict):
+            continue
+        authentication = recipe.get("authentication")
+        if not isinstance(authentication, dict):
+            continue
+        configured += 1
+        if isinstance(authentication.get("renewal"), dict):
+            renewal_configured += 1
+
+    return {
+        "configured": configured,
+        "renewal_configured": renewal_configured,
     }

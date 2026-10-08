@@ -100,6 +100,7 @@ export type DiagnosticsResponse = {
   status: string;
   database: { status: string };
   workers: { online: number; total: number };
+  authentication: { configured: number; renewal_configured: number };
 };
 
 export type ExecutionEvent = {

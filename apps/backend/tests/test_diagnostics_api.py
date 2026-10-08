@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from app.database import get_db
 from app.enums import WorkerStatus
 from app.main import app
-from app.models import Worker
+from app.models import Automation, AutomationVersion, Worker
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
@@ -85,6 +85,66 @@ class DiagnosticsApiTests(unittest.TestCase):
         self.assertEqual(body["database"]["status"], "ok")
         self.assertEqual(body["workers"]["online"], 1)
         self.assertEqual(body["workers"]["total"], 1)
+
+    def test_diagnostics_reports_authentication_configuration_without_secrets(self):
+        db = self.session_factory()
+        try:
+            automation = Automation(code="AUTH-DIAG", name="Auth diagnostics")
+            db.add(automation)
+            db.flush()
+            db.add_all(
+                [
+                    AutomationVersion(
+                        automation_id=automation.id,
+                        version=1,
+                        recipe={
+                            "schema_version": 1,
+                            "name": "With auth",
+                            "authentication": {
+                                "session_ref": "portal-a",
+                                "login_selectors": ["#login"],
+                            },
+                            "steps": [],
+                            "output": {"type": "file"},
+                        },
+                    ),
+                    AutomationVersion(
+                        automation_id=automation.id,
+                        version=2,
+                        recipe={
+                            "schema_version": 1,
+                            "name": "With renewal",
+                            "authentication": {
+                                "session_ref": "portal-b",
+                                "login_selectors": ["#login"],
+                                "renewal": {
+                                    "login_url": "https://example.test/login",
+                                    "username_selector": "#user",
+                                    "password_selector": "#pass",
+                                    "submit_selector": "#submit",
+                                    "success_selector": "#logout",
+                                    "username_ref": "portal.username",
+                                    "password_ref": "portal.password",
+                                },
+                            },
+                            "steps": [],
+                            "output": {"type": "file"},
+                        },
+                    ),
+                ]
+            )
+            db.commit()
+        finally:
+            db.close()
+
+        response = self.client.get("/diagnostics")
+
+        self.assertEqual(response.status_code, 200)
+        authentication = response.json()["authentication"]
+        self.assertEqual(authentication["configured"], 2)
+        self.assertEqual(authentication["renewal_configured"], 1)
+        self.assertNotIn("portal.username", response.text)
+        self.assertNotIn("portal.password", response.text)
 
 
 if __name__ == "__main__":
