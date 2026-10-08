@@ -10,6 +10,7 @@ from app.schemas_destination import (
     DestinationCreate,
     DestinationListResponse,
     DestinationRead,
+    DestinationUpdate,
 )
 
 
@@ -81,6 +82,63 @@ def list_destinations(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.put("/{destination_id}", response_model=DestinationRead)
+def update_destination(
+    destination_id: int,
+    payload: DestinationUpdate,
+    db: Session = Depends(get_db),
+):
+    destination = get_by_id(db, destination_id)
+    if destination is None:
+        raise ApiError(404, "DESTINATION_NOT_FOUND", "Destination not found")
+
+    existing = get_by_code(db, payload.code)
+    if existing is not None and existing.id != destination_id:
+        raise ApiError(
+            409,
+            "DESTINATION_CODE_CONFLICT",
+            "Destination code already exists",
+        )
+
+    if not payload.path_reference.strip():
+        raise ApiError(
+            422,
+            "DESTINATION_PATH_REQUIRED",
+            "Destination path_reference is required",
+        )
+
+    destination.code = payload.code
+    destination.name = payload.name
+    destination.path_reference = payload.path_reference.strip()
+    destination.enabled = payload.enabled
+
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise ApiError(
+            409,
+            "DESTINATION_CODE_CONFLICT",
+            "Destination code already exists",
+        ) from exc
+
+    db.refresh(destination)
+    return _read(destination)
+
+
+@router.delete("/{destination_id}", status_code=204)
+def delete_destination(
+    destination_id: int,
+    db: Session = Depends(get_db),
+):
+    destination = get_by_id(db, destination_id)
+    if destination is None:
+        raise ApiError(404, "DESTINATION_NOT_FOUND", "Destination not found")
+
+    db.delete(destination)
+    db.commit()
 
 
 @router.get("/{destination_id}", response_model=DestinationRead)

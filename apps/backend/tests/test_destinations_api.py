@@ -98,6 +98,71 @@ class DestinationsApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 422)
 
+    def test_update_destination(self):
+        created = self.client.post(
+            "/destinations",
+            json={
+                "code": "LOCAL",
+                "name": "Local",
+                "path_reference": "C:/old",
+            },
+        ).json()
+
+        response = self.client.put(
+            f"/destinations/{created['id']}",
+            json={
+                "code": "LOCAL_UPDATED",
+                "name": "Local atualizado",
+                "path_reference": "C:/new",
+                "enabled": False,
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["code"], "LOCAL_UPDATED")
+        self.assertFalse(response.json()["enabled"])
+
+    def test_update_rejects_duplicate_code(self):
+        first = {
+            "code": "FIRST",
+            "name": "Primeiro",
+            "path_reference": "C:/first",
+        }
+        second = {
+            "code": "SECOND",
+            "name": "Segundo",
+            "path_reference": "C:/second",
+        }
+
+        self.client.post("/destinations", json=first)
+        created = self.client.post("/destinations", json=second).json()
+
+        response = self.client.put(
+            f"/destinations/{created['id']}",
+            json={**second, "code": "FIRST"},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"]["code"], "DESTINATION_CODE_CONFLICT")
+
+    def test_delete_destination(self):
+        created = self.client.post(
+            "/destinations",
+            json={
+                "code": "DELETE_ME",
+                "name": "Excluir",
+                "path_reference": "C:/delete",
+            },
+        ).json()
+
+        response = self.client.delete(f"/destinations/{created['id']}")
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(
+            self.client.get(f"/destinations/{created['id']}").status_code,
+            404,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

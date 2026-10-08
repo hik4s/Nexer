@@ -129,6 +129,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(`API_REQUEST_FAILED:${response.status}`);
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return (await response.json()) as T;
 }
 
@@ -193,6 +197,17 @@ export const api = {
     request<Destination>("/destinations", {
       method: "POST",
       body: JSON.stringify(input),
+    }),
+
+  updateDestination: (id: number, input: CreateDestinationInput) =>
+    request<Destination>(`/destinations/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    }),
+
+  deleteDestination: (id: number) =>
+    request<void>(`/destinations/${id}`, {
+      method: "DELETE",
     }),
 };
 
