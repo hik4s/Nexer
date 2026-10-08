@@ -149,3 +149,17 @@
 - Backend diagnostics tests: 32/32 passed in the full backend suite.
 - Frontend diagnostics regression: 1/1 passed.
 - Legacy splash syntax is valid on the current feature branch; CI run 281 failure was from the older pull-request merge result before the splash fix.
+
+## Destination CRUD - 2026-10-08
+
+- Destinations API now exposes create/list/get/update/delete.
+- Update enforces unique code and non-blank path reference.
+- Frontend Destinations page supports create, edit, active/inactive state, and delete confirmation.
+- HTTP client handles 204 No Content responses.
+- Destination backend tests: 6/6 passed.
+- Frontend full suite: 8 files / 14 tests passed.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Integrated verification: backend 35/35; worker 11/11 with real Edge E2E skipped unless opt-in; runtime 43/43 with real Edge E2E skipped unless opt-in.
+- GitHub Actions run 289 for commit a1979b7 completed successfully, including dependency security audit.
+- Local pip-audit execution was not completed; do not claim local Python audit green.

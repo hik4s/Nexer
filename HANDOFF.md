@@ -84,3 +84,17 @@ A Etapa 1 já possui:
 ## Authentication diagnostics - 2026-10-08
 
 Added non-sensitive authentication configuration counters to `/diagnostics` and surfaced them in the frontend. Backend full suite is 32/32; runtime 43/43, worker 11/11, legacy smoke 4/4; frontend targeted diagnostic test 1/1.
+
+## Destination CRUD - 2026-10-08
+
+- Backend Destinations now supports create/list/get/update/delete.
+- Update validates duplicate codes and required path references.
+- Frontend Destinations now supports create/edit/enable-disable/delete with confirmation.
+- Frontend API helper now handles HTTP 204 responses correctly.
+- Destination backend tests: 6/6 passed.
+- Frontend full suite: 8 files / 14 tests passed.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Integrated verification: backend 35/35, worker 11/11 (1 real Edge test skipped without opt-in), runtime 43/43 (1 real Edge test skipped without opt-in).
+- GitHub Actions run 289 for commit a1979b7 is green, including Python dependency security audit and frontend dependency audit.
+- Local pip-audit did not complete on this Windows executor; do not claim the local audit green.
