@@ -55,3 +55,13 @@ A Etapa 1 já possui:
 - não considerar código escrito como concluído sem teste e evidência;
 - preferir desenvolvimento remoto; usar Windows/Edge real apenas quando a validação do comportamento local exigir;
 - ao final de um bloco relevante, atualizar `CURRENT_STATE.md` e este arquivo.
+
+## Latest verification - 2026-10-08
+
+- Backend: 31/31 tests OK after the verification harness PYTHONPATH fix.
+- Worker: 9 tests OK; real Edge E2E remains opt-in.
+- Runtime: 30 tests OK; real Edge E2E remains opt-in.
+- Frontend regression: 3/3 targeted tests OK.
+- Frontend typecheck and production build: OK.
+- Commit pushed: `328624db3c17d809584b2ade0e5beeaa9dc7eee9`.
+- GitHub Actions run 277 is still in progress.

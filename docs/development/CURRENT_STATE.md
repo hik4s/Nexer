@@ -104,3 +104,16 @@
 - evidência real antes de marcar microtarefa;
 - nenhuma credencial, token ou dado sensível em logs, fixtures ou receitas;
 - a conversa é interface; o repositório/Linear são a memória operacional.
+
+## Latest verification - 2026-10-08
+
+- Windows verification ran on `feat/etapa1-foundation` at `87fefaa` before the local fixes.
+- Backend: 31/31 tests OK after fixing `scripts/verify.ps1` PYTHONPATH for the integrated Gate test.
+- Worker: 9 tests OK (1 E2E real Edge test skipped unless opt-in).
+- Runtime: 30 tests OK (1 E2E real Edge test skipped unless opt-in).
+- Frontend targeted regression: 3/3 tests OK after wrapping React Query mutation functions.
+- Frontend typecheck: OK.
+- Frontend production build: OK.
+- Fix committed and pushed as `328624db3c17d809584b2ade0e5beeaa9dc7eee9`.
+- GitHub Actions run 277 is currently in progress; do not treat CI as green until it finishes.
+- Local clone used for validation: `C:\Users\kis\Downloads\RelatPy-Next-Git`.
