@@ -11,8 +11,8 @@ rem =====================================================
 rem Configurações
 rem =====================================================
 
-set "NOME_EXE=RelatPy.exe"
-set "NOME_ATALHO=RelatPy"
+set "NOME_EXE=Nexer.exe"
+set "NOME_ATALHO=Nexer"
 
 rem =====================================================
 rem Cria atalho (uma única vez)

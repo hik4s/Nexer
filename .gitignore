@@ -1,5 +1,5 @@
 # =====================================================
-# RelatPy - arquivos locais e sensiveis
+# Nexer - arquivos locais e sensiveis
 # =====================================================
 
 # Credenciais e variaveis de ambiente
@@ -15,6 +15,7 @@ ENV/
 
 # Python
 __pycache__/
+node_modules/
 *.py[cod]
 *$py.class
 *.pyd

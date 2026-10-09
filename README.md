@@ -1,8 +1,8 @@
-# RelatPy
+# Nexer
 
 Automação de relatórios do **SGIND** e **IQOS**, com painel em Streamlit, controle de execução, acompanhamento de status, download dos arquivos e tratamento automático do ambiente Python.
 
-A versão final foi preparada para uso no Windows por meio do executável `RelatPy.exe`. Na primeira abertura, o launcher configura automaticamente o ambiente necessário para executar o projeto.
+A versão final foi preparada para uso no Windows por meio do executável `Nexer.exe`. Na primeira abertura, o launcher configura automaticamente o ambiente necessário para executar o projeto.
 
 ## Funcionalidades
 
@@ -68,8 +68,8 @@ Não execute o programa diretamente de dentro do arquivo ZIP.
 A pasta extraída deve conter, no mínimo:
 
 ```text
-RelatPy/
-├── RelatPy.exe
+Nexer/
+├── Nexer.exe
 ├── launcher.py
 ├── worker.py
 ├── auth.py
@@ -86,7 +86,7 @@ RelatPy/
 Execute:
 
 ```text
-RelatPy.exe
+Nexer.exe
 ```
 
 Na primeira execução, o launcher realiza automaticamente:
@@ -121,7 +121,7 @@ O arquivo `.env` não deve ser enviado ao GitHub, compartilhado por e-mail ou in
 
 ## Como usar
 
-1. Abra o `RelatPy.exe`.
+1. Abra o `Nexer.exe`.
 2. Informe as credenciais no primeiro acesso, se solicitado.
 3. Selecione a data inicial.
 4. Selecione a data final.
@@ -143,9 +143,9 @@ O botão **Parar execução** encerra:
 
 Os relatórios ainda pendentes ou em execução passam para o estado `CANCELADO`.
 
-### Fechar RelatPy
+### Fechar Nexer
 
-O botão **Fechar RelatPy** solicita o encerramento seguro do servidor Streamlit e do launcher.
+O botão **Fechar Nexer** solicita o encerramento seguro do servidor Streamlit e do launcher.
 
 ## Pastas criadas localmente
 
@@ -216,7 +216,7 @@ Se a `venv` existir, mas estiver inválida, o launcher tenta recriá-la.
 O launcher calcula uma assinatura SHA-256 do arquivo de requisitos e registra em:
 
 ```text
-venv/.relatpy_dependencies.sha256
+venv/.nexer_dependencies.sha256
 ```
 
 As dependências são reinstaladas quando:
@@ -250,7 +250,7 @@ Isso evita o download adicional do Chromium e reduz problemas em redes corporati
 A inicialização do navegador deve respeitar a variável:
 
 ```text
-RELATPY_BROWSER_CHANNEL=msedge
+NEXER_BROWSER_CHANNEL=msedge
 ```
 
 Exemplo no código:
@@ -259,7 +259,7 @@ Exemplo no código:
 import os
 
 canal = os.environ.get(
-    "RELATPY_BROWSER_CHANNEL",
+    "NEXER_BROWSER_CHANNEL",
     "msedge",
 )
 
@@ -280,7 +280,7 @@ ui/streamlit_app.py
 requisitos.txt
 ```
 
-O executável deve permanecer junto da pasta completa do projeto. Não distribua apenas o `RelatPy.exe` isoladamente.
+O executável deve permanecer junto da pasta completa do projeto. Não distribua apenas o `Nexer.exe` isoladamente.
 
 ### Python não encontrado
 
@@ -288,7 +288,7 @@ O launcher tentará instalar Python 3.12 usando `winget`.
 
 Se o `winget` não estiver disponível, instale o Python manualmente e marque a opção **Add Python to PATH**.
 
-Depois, abra novamente o `RelatPy.exe`.
+Depois, abra novamente o `Nexer.exe`.
 
 ### Internal Server Error
 
@@ -366,32 +366,32 @@ Remova builds antigos:
 ```powershell
 Remove-Item .\build -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item .\dist -Recurse -Force -ErrorAction SilentlyContinue
-Remove-Item .\RelatPy.spec -Force -ErrorAction SilentlyContinue
+Remove-Item .\Nexer.spec -Force -ErrorAction SilentlyContinue
 ```
 
 Compile:
 
 ```powershell
-.\venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --windowed --name RelatPy --icon ".\assets\logo.ico" ".\launcher.py"
+.\venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --onefile --windowed --name Nexer --icon ".\assets\logo.ico" ".\launcher.py"
 ```
 
 O arquivo será gerado em:
 
 ```text
-dist/RelatPy.exe
+dist/Nexer.exe
 ```
 
 Copie para a raiz:
 
 ```powershell
-Copy-Item .\dist\RelatPy.exe .\RelatPy.exe -Force
+Copy-Item .\dist\Nexer.exe .\Nexer.exe -Force
 ```
 
 Confirme antes de publicar:
 
 ```powershell
-Test-Path .\RelatPy.exe
-Get-Item .\RelatPy.exe |
+Test-Path .\Nexer.exe
+Get-Item .\Nexer.exe |
     Select-Object FullName, Length, LastWriteTime
 ```
 
@@ -400,13 +400,13 @@ Get-Item .\RelatPy.exe |
 Exemplo de configuração do remoto:
 
 ```powershell
-git remote add origin https://github.com/SEU-USUARIO/RelatPy.git
+git remote add origin https://github.com/SEU-USUARIO/Nexer.git
 ```
 
 Se o remoto já existir:
 
 ```powershell
-git remote set-url origin https://github.com/SEU-USUARIO/RelatPy.git
+git remote set-url origin https://github.com/SEU-USUARIO/Nexer.git
 ```
 
 Publicar a branch atual:
@@ -446,13 +446,13 @@ dist/
 *.bak
 *.tmp
 
-# O executável RelatPy.exe é versionado intencionalmente.
+# O executável Nexer.exe é versionado intencionalmente.
 ```
 
 Antes de enviar, confirme:
 
 ```powershell
-git check-ignore -v .\RelatPy.exe
+git check-ignore -v .\Nexer.exe
 ```
 
 O comando não deve retornar nenhuma regra.
@@ -471,8 +471,8 @@ O comando não deve retornar nenhuma regra.
 ## Estrutura recomendada para distribuição
 
 ```text
-RelatPy/
-├── RelatPy.exe
+Nexer/
+├── Nexer.exe
 ├── launcher.py
 ├── worker.py
 ├── auth.py
@@ -508,7 +508,7 @@ Versão final funcional, com:
 - reparo automático do Streamlit;
 - uso do Microsoft Edge pelo Playwright;
 - limpeza dos downloads entre execuções;
-- geração e distribuição pelo executável `RelatPy.exe`.
+- geração e distribuição pelo executável `Nexer.exe`.
 
 ## Licença e uso
 

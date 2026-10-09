@@ -113,7 +113,7 @@ PASTA_LOGS.mkdir(
 # =====================================================
 
 st.set_page_config(
-    page_title="RelatPy",
+    page_title="Nexer",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -121,7 +121,7 @@ st.set_page_config(
 
 st_autorefresh(
     interval=3000,
-    key="relatpy_autorefresh"
+    key="nexer_autorefresh"
 )
 
 
@@ -159,7 +159,7 @@ st.markdown(
         min-height: 42px;
     }
 
-    .relatpy-caption {
+    .nexer-caption {
         color: #94a3b8;
         font-size: 0.85rem;
     }
@@ -796,7 +796,7 @@ def preparar_log_worker(
     )
 
     log.write(
-        "RELATPY - NOVA EXECUÇÃO\n"
+        "NEXER - NOVA EXECUÇÃO\n"
     )
 
     log.write(
@@ -1361,7 +1361,7 @@ def arquivo_rede_existe(
 # =====================================================
 
 st.title(
-    "📊 RelatPy"
+    "📊 Nexer"
 )
 
 st.subheader(
@@ -2041,7 +2041,7 @@ with st.expander(
 
 
 # =====================================================
-# ENCERRAMENTO DO RELATPY
+# ENCERRAMENTO DO NEXER
 # =====================================================
 
 st.divider()
@@ -2056,7 +2056,7 @@ with coluna_info:
 
         st.caption(
             "Uma execução está ativa. Use Parar execução "
-            "antes de encerrar o RelatPy se quiser cancelar "
+            "antes de encerrar o Nexer se quiser cancelar "
             "os relatórios."
         )
 
@@ -2064,20 +2064,20 @@ with coluna_info:
 
         st.caption(
             "Use o botão ao lado para encerrar o servidor "
-            "do RelatPy com segurança."
+            "do Nexer com segurança."
         )
 
 
 with coluna_fechar:
 
-    fechar_relatpy = st.button(
-        "⏻ Fechar RelatPy",
+    fechar_nexer = st.button(
+        "⏻ Fechar Nexer",
         use_container_width=True,
         type="secondary"
     )
 
 
-if fechar_relatpy:
+if fechar_nexer:
 
     try:
 
@@ -2105,5 +2105,5 @@ if fechar_relatpy:
 st.divider()
 
 st.caption(
-    "RelatPy | SGIND + IQOS | Paralelismo habilitado"
+    "Nexer | SGIND + IQOS | Paralelismo habilitado"
 )

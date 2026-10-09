@@ -204,7 +204,7 @@ def salvar_credenciais(
 ):
     """
     Grava as credenciais no .env usando os nomes originais
-    utilizados pelo RelatPy:
+    utilizados pelo Nexer:
 
         SITE_USUARIO
         SITE_SENHA
@@ -324,7 +324,7 @@ def remover_env():
 
 def pedir_senha_confirmada():
     """
-    Usado somente quando o RelatPy é executado diretamente
+    Usado somente quando o Nexer é executado diretamente
     em um terminal interativo.
     """
 
@@ -379,7 +379,7 @@ def obter_credenciais():
 
         raise RuntimeError(
             "Arquivo .env não encontrado ou incompleto. "
-            "Abra o dashboard do RelatPy e informe as "
+            "Abra o dashboard do Nexer e informe as "
             "credenciais na tela de primeiro acesso. "
             f"Caminho esperado: {CAMINHO_ENV}"
         )
