@@ -1,10 +1,10 @@
-# RelatPy
+# Nexer
 
 > Automação de relatórios corporativos com Python, Playwright e Streamlit, desenvolvida para reduzir tarefas manuais, acompanhar execuções em tempo real e simplificar a instalação em computadores Windows.
 
 ## Visão geral
 
-O **RelatPy** é um projeto de automação criado para extrair, organizar e disponibilizar relatórios de dois sistemas web internos, o **SGIND** e o **IQOS**.
+O **Nexer** é um projeto de automação criado para extrair, organizar e disponibilizar relatórios de dois sistemas web internos, o **SGIND** e o **IQOS**.
 
 A solução nasceu de um problema operacional: relatórios diferentes exigiam acesso manual aos sistemas, preenchimento de filtros, navegação por tabelas hierárquicas, solicitação de exportações, acompanhamento do processamento e download individual de arquivos. Além do tempo gasto, o processo estava sujeito a falhas humanas, arquivos duplicados e dificuldade para acompanhar o andamento de execuções demoradas.
 
@@ -75,8 +75,8 @@ Os estados utilizados pela interface são:
 O projeto foi separado em componentes com responsabilidades específicas:
 
 ```text
-RelatPy/
-├── RelatPy.exe
+Nexer/
+├── Nexer.exe
 ├── launcher.py
 ├── worker.py
 ├── main.py
@@ -114,7 +114,7 @@ RelatPy/
 ### Fluxo principal
 
 ```text
-RelatPy.exe
+Nexer.exe
     ↓
 launcher.py
     ↓
@@ -163,7 +163,7 @@ O `ui/streamlit_app.py` oferece:
 - detalhes por relatório;
 - downloads dos arquivos gerados;
 - visualização do log da execução;
-- encerramento seguro do RelatPy.
+- encerramento seguro do Nexer.
 
 ### Worker
 
@@ -383,7 +383,7 @@ requisitos.txt
 
 Depois disso, o launcher prepara o ambiente.
 
-Na primeira execução, o `RelatPy.exe` pode:
+Na primeira execução, o `Nexer.exe` pode:
 
 - localizar Python 3.10 ou superior;
 - instalar Python 3.12 pelo `winget`, quando disponível;
@@ -444,7 +444,7 @@ O launcher foi empacotado com PyInstaller:
     --clean `
     --onefile `
     --windowed `
-    --name RelatPy `
+    --name Nexer `
     --icon ".\assets\logo.ico" `
     --add-data ".\assets\logo.ico;assets" `
     ".\launcher.py"
@@ -537,7 +537,7 @@ O painel também apresenta o conteúdo mais recente do log da execução.
 
 1. Baixe ou clone o repositório.
 2. Extraia a pasta completa.
-3. Execute `RelatPy.exe`.
+3. Execute `Nexer.exe`.
 4. Informe as credenciais no primeiro acesso.
 5. Selecione o período.
 6. Clique em **Executar Relatórios**.
@@ -589,7 +589,7 @@ Para simular uma instalação nova:
 
 ```powershell
 Remove-Item .\venv -Recurse -Force
-.\RelatPy.exe
+.\Nexer.exe
 ```
 
 O launcher deve recriar o ambiente e instalar as dependências.
@@ -644,7 +644,7 @@ Possíveis evoluções:
 
 ## Por que este projeto é relevante para uma vaga júnior ou estágio
 
-O RelatPy demonstra a capacidade de transformar uma necessidade operacional em uma aplicação funcional, passando por levantamento do problema, implementação, testes, diagnóstico, segurança, empacotamento e documentação.
+O Nexer demonstra a capacidade de transformar uma necessidade operacional em uma aplicação funcional, passando por levantamento do problema, implementação, testes, diagnóstico, segurança, empacotamento e documentação.
 
 O trabalho não se limitou a escrever scripts de automação. Foi necessário lidar com:
 
@@ -690,9 +690,9 @@ Antes do commit:
 
 ```powershell
 git status
-git check-ignore -v .\RelatPy.exe
-git add README.md launcher.py RelatPy.exe requisitos.txt
-git commit -m "Finaliza projeto RelatPy e documentação de portfólio"
+git check-ignore -v .\Nexer.exe
+git add README.md launcher.py Nexer.exe requisitos.txt
+git commit -m "Finaliza projeto Nexer e documentação de portfólio"
 git push
 ```
 

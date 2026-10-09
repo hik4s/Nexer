@@ -1,6 +1,6 @@
 import unittest
 
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 
 from app.main import app
 

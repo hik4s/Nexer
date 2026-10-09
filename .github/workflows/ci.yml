@@ -1,4 +1,4 @@
-name: RelatPy CI
+name: Nexer CI
 
 on:
   push:
@@ -45,6 +45,7 @@ jobs:
         shell: pwsh
         env:
           PYTHONPATH: apps/backend;apps/worker;apps/runtime
+          NEXER_ENVIRONMENT: test
         run: python -m unittest discover -s apps/backend/tests -v
 
       - name: Worker tests

@@ -3,7 +3,7 @@ import time
 import unittest
 
 
-from relatpy_worker.loop import WorkerLoop
+from nexer_worker.loop import WorkerLoop
 
 
 class FakeStopEvent:

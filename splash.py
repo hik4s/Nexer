@@ -66,7 +66,7 @@ def aguardar_servidor(janela):
 
 
 janela = tk.Tk()
-janela.title("RelatPy")
+janela.title("Nexer")
 janela.geometry("500x220")
 janela.resizable(False, False)
 
@@ -80,7 +80,7 @@ janela.configure(bg="#0F172A")
 
 titulo = tk.Label(
     janela,
-    text="📊 RelatPy",
+    text="📊 Nexer",
     font=("Segoe UI", 24, "bold"),
     bg="#0F172A",
     fg="white",

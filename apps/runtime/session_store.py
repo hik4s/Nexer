@@ -14,7 +14,7 @@ class SessionStateError(RuntimeError):
 
 
 class SessionStateStore:
-    SERVICE_NAME = "RelatPy.Session"
+    SERVICE_NAME = "Nexer.Session"
 
     def save(self, reference: str, state: dict) -> None:
         _validate_reference(reference)

@@ -13,7 +13,7 @@ BACKEND_ROOT = Path(__file__).resolve().parents[1]
 class DatabaseSchemaTests(unittest.TestCase):
     def test_initial_migration_creates_all_master_plan_tables(self):
         with tempfile.TemporaryDirectory() as tmp:
-            db_path = Path(tmp) / "relatpy.db"
+            db_path = Path(tmp) / "nexer.db"
             config = Config(str(BACKEND_ROOT / "alembic.ini"))
             config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
 

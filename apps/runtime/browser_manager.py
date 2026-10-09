@@ -75,6 +75,37 @@ class BrowserManager:
             raise BrowserManagerError("BROWSER_PAGE_FAILED") from exc
         return BrowserPageHandle(context=context, page=page)
 
+
+
+    def create_monitored_corporate_page(self, system, *, authorize):
+        from monitored_browser import MonitoredCorporatePage
+        return MonitoredCorporatePage(system, authorize=authorize, headless=self.headless)
+
+    def create_corporate_page(self, system, *, authorize):
+        """Fresh restricted context; no storage state, traces or persistent profile."""
+        from corporate_browser import CorporateBrowserPolicy
+
+        if self._browser is None:
+            raise BrowserManagerError("BROWSER_NOT_STARTED")
+        policy = CorporateBrowserPolicy(system, authorize=authorize)
+        context = None
+        try:
+            context = self._browser.new_context(
+                accept_downloads=True, service_workers="block")
+            policy.install(context)
+            page = context.new_page()
+            policy.check()
+            handle = BrowserPageHandle(context=context, page=page)
+            handle.corporate_policy = policy
+            return handle
+        except Exception:
+            if context is not None:
+                try:
+                    context.close()
+                except Exception:
+                    pass
+            raise BrowserManagerError("CORPORATE_CONTEXT_UNAVAILABLE") from None
+
     def close(self) -> None:
         browser = self._browser
         playwright = self._playwright

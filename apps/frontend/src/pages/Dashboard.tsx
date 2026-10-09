@@ -16,7 +16,7 @@ export function Dashboard() {
       <div className="page-heading">
         <div>
           <p className="eyebrow">Operação local</p>
-          <h1>RelatPy Dashboard</h1>
+          <h1>Nexer Dashboard</h1>
           <p className="muted">
             Visão inicial do ambiente e das automações executáveis.
           </p>

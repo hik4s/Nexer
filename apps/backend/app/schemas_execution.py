@@ -1,6 +1,13 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator, model_validator
+from typing import Literal
+
+
+class CorporateCredential(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    username: SecretStr = Field(min_length=1, max_length=1024, repr=False)
+    password: SecretStr = Field(min_length=1, max_length=1024, repr=False)
 
 
 class ExecutionCreate(BaseModel):
@@ -14,6 +21,7 @@ class ExecutionCreate(BaseModel):
     overwrite_existing: bool = False
     test_mode: bool = False
     inputs: dict = Field(default_factory=dict)
+    corporate_credentials: dict[Literal["SGIND", "IQOS"], CorporateCredential] = Field(default_factory=dict, repr=False)
 
     @field_validator("automation_ids")
     @classmethod

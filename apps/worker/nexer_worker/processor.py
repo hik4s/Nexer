@@ -6,12 +6,18 @@ from typing import Callable
 from sqlalchemy import select
 
 from app.enums import ExecutionAutomationStatus, ExecutionStage, ExecutionStatus
-from app.models import AutomationVersion, Checkpoint, Event, Execution, ExecutionAutomation
+from app.models import Automation, AutomationVersion, Checkpoint, Event, Execution, ExecutionAutomation
 from auth_guard import build_auth_guard
-from credentials import KeyringCredentialProvider
+from corporate_auth import authenticate_corporate, require_validated_adapter
+from corporate_guard import CorporateExecutionGuard, validate_corporate_recipe
+from credentials import CredentialResolutionError
+
+
+class UnavailableCredentialProvider:
+    def get(self, reference):
+        raise CredentialResolutionError("CREDENTIALS_UNAVAILABLE")
 from context import ExecutionContext
 from runner import RecipeRunner
-from session_store import SessionStateStore
 
 
 @dataclass(frozen=True)
@@ -31,6 +37,8 @@ class WorkerExecutionProcessor:
         runner=None,
         secret_provider=None,
         session_state_store=None,
+        credential_client=None,
+        corporate_page_factory=None,
     ):
         if page_factory is None:
             raise ValueError("page_factory is required")
@@ -40,8 +48,10 @@ class WorkerExecutionProcessor:
         self.page_factory = page_factory
         self.downloads_root = Path(downloads_root)
         self.runner = runner or RecipeRunner()
-        self.secret_provider = secret_provider or KeyringCredentialProvider()
-        self.session_state_store = session_state_store or SessionStateStore()
+        self.secret_provider = secret_provider or UnavailableCredentialProvider()
+        self.session_state_store = None  # Corporate sessions must never persist.
+        self.credential_client = credential_client
+        self.corporate_page_factory = corporate_page_factory
 
     def process_once(self) -> ProcessResult:
         execution_id = self.worker_service.claim_next()
@@ -51,6 +61,11 @@ class WorkerExecutionProcessor:
         try:
             return self._process_execution(execution_id)
         finally:
+            if self.credential_client is not None:
+                try:
+                    self.credential_client.release(execution_id)
+                except RuntimeError:
+                    pass  # API shutdown/expiry never exposes errors or replays credentials.
             self.worker_service.release_execution(execution_id)
 
     def _process_execution(self, execution_id: int) -> ProcessResult:
@@ -86,6 +101,15 @@ class WorkerExecutionProcessor:
     def _run_item(self, execution: Execution, item: ExecutionAutomation) -> None:
         try:
             recipe = self._load_recipe(item.automation_id, item.automation_version)
+            corporate_system = self._corporate_system(item.automation_id)
+            if corporate_system is not None:
+                require_validated_adapter(corporate_system)
+                recipe = validate_corporate_recipe(recipe)
+                self._authorize_corporate(execution.id, corporate_system)
+                if self.corporate_page_factory is None:
+                    raise RuntimeError("CORPORATE_CONTEXT_UNAVAILABLE")
+            if (recipe.get("authentication") or {}).get("renewal") is not None:
+                raise RuntimeError("CORPORATE_AUTH_NOT_VALIDATED")
         except Exception as exc:
             self._mark_failed(
                 execution.id,
@@ -116,7 +140,17 @@ class WorkerExecutionProcessor:
 
         page = None
         try:
-            page = self.page_factory(execution, item, recipe)
+            if corporate_system is not None:
+                page = self.corporate_page_factory(
+                    corporate_system, lambda: self._authorize_corporate(execution.id, corporate_system))
+                authenticate_corporate(
+                    page, self.credential_client, execution.id, corporate_system,
+                    cancellation_requested=lambda: self._execution_cancel_requested(execution.id))
+                auth_guard = CorporateExecutionGuard(corporate_system, page.corporate_policy)
+            else:
+                page = self.page_factory(execution, item, recipe)
+                auth_guard = build_auth_guard(recipe.get("authentication"),
+                                              credential_provider=self.secret_provider)
             variables = self._execution_variables(execution)
             downloads_dir = (
                 self.downloads_root
@@ -137,18 +171,16 @@ class WorkerExecutionProcessor:
                 cancellation_requested=lambda: self._execution_cancel_requested(
                     execution.id
                 ),
-                auth_guard=build_auth_guard(
-                    recipe.get("authentication"),
-                    credential_provider=self.secret_provider,
-                ),
+                auth_guard=auth_guard,
             )
             result = self.runner.run(recipe, context)
+            if corporate_system is not None and not result.cancelled and result.failed_step_id is None:
+                auth_guard.ensure_authenticated(page)
             now = self._now()
 
             if result.cancelled:
                 self._cancel_item(execution.id, item.id)
             elif result.failed_step_id is None:
-                self._persist_session_state(recipe, page)
                 self._update_item(
                     item.id,
                     status=ExecutionAutomationStatus.SUCCEEDED.value,
@@ -197,17 +229,32 @@ class WorkerExecutionProcessor:
                     )
 
 
-    def _persist_session_state(self, recipe: dict, page) -> None:
-        authentication = recipe.get("authentication") or {}
-        reference = authentication.get("session_ref")
-        if not reference:
-            return
 
-        storage_state = getattr(page, "storage_state", None)
-        if not callable(storage_state):
-            raise RuntimeError("SESSION_STATE_UNAVAILABLE")
+    def _corporate_system(self, automation_id):
+        db = self.session_factory()
+        try:
+            automation = db.get(Automation, automation_id)
+            if automation is None:
+                raise RuntimeError("AUTOMATION_NOT_FOUND")
+            return automation.system if automation.system in {"SGIND", "IQOS"} else None
+        finally:
+            db.close()
 
-        self.session_state_store.save(reference, storage_state())
+    def _authorize_corporate(self, execution_id, system):
+        values = None
+        try:
+            if self._execution_cancel_requested(execution_id):
+                raise RuntimeError()
+            if self.credential_client is None:
+                raise RuntimeError()
+            values = self.credential_client.resolve(execution_id, system)
+            if not isinstance(values, dict) or set(values) != {"username", "password"}:
+                raise RuntimeError()
+        except Exception:
+            raise RuntimeError("CREDENTIALS_UNAVAILABLE") from None
+        finally:
+            if isinstance(values, dict):
+                values.clear()
 
     def _execution_cancel_requested(self, execution_id: int) -> bool:
         db = self.session_factory()
@@ -254,7 +301,7 @@ class WorkerExecutionProcessor:
         error_detail: str | None,
     ) -> None:
         now = self._now()
-        detail = (error_detail or "").strip()[:4000] or None
+        detail = "AUTOMATION_FAILED"  # Raw runtime/browser exceptions may contain credentials.
         self._update_item(
             item_id,
             status=ExecutionAutomationStatus.FAILED.value,

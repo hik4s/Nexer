@@ -34,7 +34,7 @@ describe("DestinationsPage", () => {
         id: 1,
         code: "LOCAL",
         name: "Saída local",
-        path_reference: "C:/RelatPy/outputs",
+        path_reference: "C:/Nexer/outputs",
         enabled: true,
         last_test_status: null,
         last_test_at: null,
@@ -51,7 +51,7 @@ describe("DestinationsPage", () => {
     });
 
     expect(screen.getByText("Saída local")).toBeInTheDocument();
-    expect(screen.getByText("C:/RelatPy/outputs")).toBeInTheDocument();
+    expect(screen.getByText("C:/Nexer/outputs")).toBeInTheDocument();
   });
 
   it("edits and deletes a destination", async () => {

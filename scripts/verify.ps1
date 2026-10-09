@@ -19,12 +19,14 @@ function Invoke-Checked {
     }
 }
 
-Write-Host "== RelatPy verification =="
+Write-Host "== Nexer verification =="
 Write-Host "Branch: $((git branch --show-current).Trim())"
 Write-Host "Commit: $((git rev-parse HEAD).Trim())"
 
 Invoke-Checked python -m pip check
 
+$previousNexerEnvironment = $env:NEXER_ENVIRONMENT
+$env:NEXER_ENVIRONMENT = "test"
 $env:PYTHONPATH = "$root\apps\backend;$root\apps\worker;$root\apps\runtime"
 Invoke-Checked python -m unittest discover -s apps\backend\tests -v
 
@@ -44,6 +46,12 @@ try {
     Pop-Location
 }
 
+if ($null -eq $previousNexerEnvironment) {
+    Remove-Item Env:NEXER_ENVIRONMENT -ErrorAction SilentlyContinue
+} else {
+    $env:NEXER_ENVIRONMENT = $previousNexerEnvironment
+}
+
 if (-not $SkipAudit) {
     Invoke-Checked python -m pip install pip-audit
     Invoke-Checked python -m pip_audit -r Requisitos.txt -r apps\backend\requirements.txt -r apps\runtime\requirements.txt
@@ -56,4 +64,4 @@ if (-not $SkipAudit) {
     }
 }
 
-Write-Host "== RelatPy verification passed =="
+Write-Host "== Nexer verification passed =="

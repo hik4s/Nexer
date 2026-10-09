@@ -1,4 +1,4 @@
-"""Create the initial RelatPy persistence schema."""
+"""Create the initial Nexer persistence schema."""
 
 from typing import Sequence, Union
 

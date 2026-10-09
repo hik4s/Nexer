@@ -1,1 +1,0 @@
-"""RelatPy Worker package."""

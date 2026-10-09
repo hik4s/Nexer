@@ -8,7 +8,7 @@ class CredentialResolutionError(RuntimeError):
 
 
 class KeyringCredentialProvider:
-    SERVICE_NAME = "RelatPy"
+    SERVICE_NAME = "Nexer"
 
     def get(self, reference: str) -> str:
         if not isinstance(reference, str) or not reference.strip():

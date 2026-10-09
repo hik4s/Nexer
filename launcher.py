@@ -50,7 +50,7 @@ def localizar_raiz():
 
     lista = "\n".join(str(item) for item in verificados)
     raise FileNotFoundError(
-        "Nao foi possivel localizar a raiz do RelatPy.\n\n"
+        "Nao foi possivel localizar a raiz do Nexer.\n\n"
         "Arquivos obrigatorios:\n"
         "- ui\\streamlit_app.py\n"
         "- requisitos.txt ou requirements.txt\n\n"
@@ -68,7 +68,7 @@ STATUS = RAIZ / "status"
 LOG = LOGS / "streamlit.log"
 PID = STATUS / "streamlit.pid"
 PEDIDO_ENCERRAMENTO = STATUS / "encerrar_streamlit.json"
-HASH_REQUISITOS = VENV / ".relatpy_dependencies.sha256"
+HASH_REQUISITOS = VENV / ".nexer_dependencies.sha256"
 ICONE = RAIZ / "assets" / "logo.ico"
 
 LOGS.mkdir(parents=True, exist_ok=True)
@@ -204,7 +204,7 @@ def obter_python():
         return comando
 
     raise RuntimeError(
-        "O Python foi instalado, mas nao foi localizado. Feche o RelatPy e "
+        "O Python foi instalado, mas nao foi localizado. Feche o Nexer e "
         "abra novamente."
     )
 
@@ -277,7 +277,7 @@ def instalar_dependencias():
         "atualizar pip, setuptools e wheel",
     )
 
-    definir_status("Instalando dependencias do RelatPy...")
+    definir_status("Instalando dependencias do Nexer...")
     executar(
         [str(PYTHON_VENV), "-m", "pip", "install",
          "--disable-pip-version-check", "--no-cache-dir",
@@ -448,7 +448,7 @@ def validar_playwright_e_edge():
     if edge is None:
         raise RuntimeError(
             "Microsoft Edge nao foi encontrado. Instale o Edge e execute novamente. "
-            "O RelatPy usa o Edge local para evitar downloads bloqueados pela rede."
+            "O Nexer usa o Edge local para evitar downloads bloqueados pela rede."
         )
     log(f"Microsoft Edge localizado: {edge}")
 
@@ -492,7 +492,7 @@ def iniciar_streamlit():
         "PYTHONUTF8": "1",
         "PYTHONIOENCODING": "utf-8",
         "PYTHONUNBUFFERED": "1",
-        "RELATPY_BROWSER_CHANNEL": "msedge",
+        "NEXER_BROWSER_CHANNEL": "msedge",
     })
 
     comando = [
@@ -601,8 +601,8 @@ def monitorar(processo):
 def exibir_erro(erro):
     def mostrar():
         progress.stop()
-        status_label.config(text="Falha ao iniciar o RelatPy.", fg="#EF4444")
-        messagebox.showerror("RelatPy", str(erro))
+        status_label.config(text="Falha ao iniciar o Nexer.", fg="#EF4444")
+        messagebox.showerror("Nexer", str(erro))
     janela.after(0, mostrar)
 
 
@@ -621,13 +621,13 @@ def fluxo_inicial():
 
 
 def fechar_splash():
-    if messagebox.askyesno("RelatPy", "Deseja cancelar a inicializacao?"):
+    if messagebox.askyesno("Nexer", "Deseja cancelar a inicializacao?"):
         encerrar(processo_streamlit)
         finalizar_interface()
 
 
 janela = tk.Tk()
-janela.title("RelatPy")
+janela.title("Nexer")
 janela.geometry("520x260")
 janela.resizable(False, False)
 janela.configure(bg="#0F172A")
@@ -640,7 +640,7 @@ if ICONE.is_file():
         pass
 
 tk.Label(
-    janela, text="RelatPy", font=("Segoe UI", 26, "bold"),
+    janela, text="Nexer", font=("Segoe UI", 26, "bold"),
     bg="#0F172A", fg="white",
 ).pack(pady=(30, 8))
 

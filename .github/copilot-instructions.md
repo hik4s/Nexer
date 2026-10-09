@@ -1,8 +1,8 @@
-# RelatPy — GitHub Copilot Instructions
+# Nexer — GitHub Copilot Instructions
 
 ## Objetivo
 
-Manter o desenvolvimento da nova arquitetura do RelatPy isolado do aplicativo legado e sempre orientado por TDD, segurança e verificação real.
+Manter o desenvolvimento da nova arquitetura do Nexer isolado do aplicativo legado e sempre orientado por TDD, segurança e verificação real.
 
 ## Arquitetura
 

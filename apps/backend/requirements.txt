@@ -1,4 +1,4 @@
-# Dependencies for the new RelatPy FastAPI backend.
+# Dependencies for the new Nexer FastAPI backend.
 # Keep isolated from the legacy root requirements during migration.
 fastapi>=0.115,<1.0
 pydantic-settings>=2.0,<3.0

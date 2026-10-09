@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 
 import { api } from "../lib/api";
+import { CorporateCredentialsFields } from "../components/CorporateCredentialsFields";
 
 type FormValues = {
   name: string;
@@ -121,6 +122,7 @@ export function NewExecutionPage() {
         </p>
       </div>
 
+      <CorporateCredentialsFields />
       <section className="card form-card">
         {automations.isLoading ? (
           <p className="muted">Carregando automações publicadas…</p>

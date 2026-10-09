@@ -1,10 +1,10 @@
-# RelatPy — Handoff
+# Nexer — Handoff
 
 Este arquivo é o ponto de retomada quando a conversa atual expirar.
 
 ## Bootstrap
 
-Continue o desenvolvimento do RelatPy no repositório `hik4s/RelatPy`. Leia `MASTER_PLAN.md`, `docs/development/CURRENT_STATE.md`, `HANDOFF.md` e consulte GitHub/Linear/CI. Trabalhe exclusivamente na branch isolada da nova arquitetura e não altere o legado em `master`. Use TDD para código funcional, execute os testes e só registre avanço após verificação real.
+Continue o desenvolvimento do Nexer no repositório `hik4s/Nexer`. Leia `MASTER_PLAN.md`, `docs/development/CURRENT_STATE.md`, `HANDOFF.md` e consulte GitHub/Linear/CI. Trabalhe exclusivamente na branch isolada da nova arquitetura e não altere o legado em `master`. Use TDD para código funcional, execute os testes e só registre avanço após verificação real.
 
 ## Estado atual
 

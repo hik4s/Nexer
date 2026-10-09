@@ -43,9 +43,6 @@ class RecipeRunner:
                     cancelled=True,
                 )
 
-            if context.auth_guard is not None:
-                context.page = context.auth_guard.ensure_authenticated(context.page)
-
             context.current_step_id = step["id"]
             context.event(
                 "step.started",
@@ -61,6 +58,8 @@ class RecipeRunner:
             last_error: Exception | None = None
 
             for attempt in range(1, max_attempts + 1):
+                if context.auth_guard is not None:
+                    context.page = context.auth_guard.ensure_authenticated(context.page)
                 try:
                     self.registry.execute(step["action"], step, context)
                     step_succeeded = True

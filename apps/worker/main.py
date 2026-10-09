@@ -1,4 +1,4 @@
-"""Executable entry point for the RelatPy Worker."""
+"""Executable entry point for the Nexer Worker."""
 
 import os
 import signal
@@ -8,10 +8,9 @@ from threading import Event
 
 from app.database import SessionLocal
 from browser_manager import BrowserManager
-from session_store import SessionStateStore
-from relatpy_worker.loop import WorkerLoop
-from relatpy_worker.processor import WorkerExecutionProcessor
-from relatpy_worker.service import WorkerService
+from nexer_worker.loop import WorkerLoop
+from nexer_worker.processor import WorkerExecutionProcessor
+from nexer_worker.service import WorkerService
 
 
 @dataclass
@@ -20,13 +19,13 @@ class WorkerApp:
     browser_manager: BrowserManager
 
 
-def build_worker(*, browser_manager: BrowserManager | None = None) -> WorkerApp:
-    worker_id = os.getenv("RELATPY_WORKER_ID") or f"worker-{os.getpid()}"
-    concurrency = int(os.getenv("RELATPY_WORKER_CONCURRENCY", "1"))
+def build_worker(*, browser_manager: BrowserManager | None = None, worker_id=None, credential_client=None) -> WorkerApp:
+    worker_id = worker_id or os.getenv("NEXER_WORKER_ID") or f"worker-{os.getpid()}"
+    concurrency = int(os.getenv("NEXER_WORKER_CONCURRENCY", "1"))
     downloads_root = Path(
-        os.getenv("RELATPY_DOWNLOADS_ROOT", "./downloads")
+        os.getenv("NEXER_DOWNLOADS_ROOT", "./downloads")
     )
-    headless = _env_bool("RELATPY_BROWSER_HEADLESS", default=True)
+    headless = _env_bool("NEXER_BROWSER_HEADLESS", default=True)
 
     manager = browser_manager or BrowserManager(
         headless=headless,
@@ -34,16 +33,8 @@ def build_worker(*, browser_manager: BrowserManager | None = None) -> WorkerApp:
     )
     manager.start()
 
-    session_store = SessionStateStore()
-
     def page_factory(execution, item, recipe):
-        authentication = recipe.get("authentication") or {}
-        session_ref = authentication.get("session_ref")
-        storage_state = session_store.load(session_ref) if session_ref else None
-        return manager.create_page(
-            f"{execution.id}-{item.id}",
-            storage_state=storage_state,
-        )
+        return manager.create_page(f"{execution.id}-{item.id}")
 
     service = WorkerService(
         session_factory=SessionLocal,
@@ -56,7 +47,9 @@ def build_worker(*, browser_manager: BrowserManager | None = None) -> WorkerApp:
         worker_service=service,
         page_factory=page_factory,
         downloads_root=downloads_root,
-        session_state_store=session_store,
+        credential_client=credential_client,
+        corporate_page_factory=lambda system, authorize: manager.create_monitored_corporate_page(
+            system, authorize=authorize),
     )
     loop = WorkerLoop(
         service=service,
@@ -67,12 +60,12 @@ def build_worker(*, browser_manager: BrowserManager | None = None) -> WorkerApp:
     return WorkerApp(loop=loop, browser_manager=manager)
 
 
-def main() -> int:
+def main(*, worker_id=None, credential_client=None) -> int:
     stop_event = Event()
     for signum in (signal.SIGINT, signal.SIGTERM):
         signal.signal(signum, lambda *_args: stop_event.set())
 
-    app = build_worker()
+    app = build_worker(worker_id=worker_id, credential_client=credential_client)
     try:
         app.loop.run(stop_event=stop_event)
         return 0

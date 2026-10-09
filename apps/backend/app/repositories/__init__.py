@@ -1,1 +1,1 @@
-"""Persistence repositories for the RelatPy backend."""
+"""Persistence repositories for the Nexer backend."""

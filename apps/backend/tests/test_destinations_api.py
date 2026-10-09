@@ -4,7 +4,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -61,7 +61,7 @@ class DestinationsApiTests(unittest.TestCase):
             json={
                 "code": "LOCAL_REPORTS",
                 "name": "Relatórios locais",
-                "path_reference": "C:/RelatPy/outputs",
+                "path_reference": "C:/Nexer/outputs",
             },
         )
 

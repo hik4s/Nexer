@@ -16,7 +16,7 @@ class PilotRecipeTests(unittest.TestCase):
         validated = validate_recipe(recipe)
 
         self.assertEqual(validated["schema_version"], 1)
-        self.assertEqual(validated["name"], "RelatPy Local Pilot")
+        self.assertEqual(validated["name"], "Nexer Local Pilot")
         self.assertEqual(
             [step["action"] for step in validated["steps"]],
             [

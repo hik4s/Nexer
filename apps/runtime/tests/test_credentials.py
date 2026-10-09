@@ -13,12 +13,12 @@ class KeyringCredentialProviderTests(unittest.TestCase):
         get_password.return_value = "very-secret"
 
         provider = KeyringCredentialProvider()
-        value = provider.get("relatpy/sgind/password")
+        value = provider.get("nexer/sgind/password")
 
         self.assertEqual(value, "very-secret")
         get_password.assert_called_once_with(
-            "RelatPy",
-            "relatpy/sgind/password",
+            "Nexer",
+            "nexer/sgind/password",
         )
 
     @patch("credentials.keyring.get_password")
@@ -28,7 +28,7 @@ class KeyringCredentialProviderTests(unittest.TestCase):
         provider = KeyringCredentialProvider()
 
         with self.assertRaises(CredentialResolutionError) as raised:
-            provider.get("relatpy/sgind/password")
+            provider.get("nexer/sgind/password")
 
         self.assertEqual(str(raised.exception), "CREDENTIAL_NOT_FOUND")
 

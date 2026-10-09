@@ -5,7 +5,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 

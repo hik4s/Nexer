@@ -2,6 +2,11 @@ export type HealthResponse = {
   status: "ok";
 };
 
+export type AuthSession = {
+  authenticated: boolean;
+  username: string | null;
+};
+
 export type Automation = {
   id: number;
   code: string;
@@ -144,11 +149,12 @@ export type ExecutionEvent = {
 };
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
+  import.meta.env.VITE_API_URL ?? (window.location.hostname === "localhost" ? "http://localhost:8000" : "http://127.0.0.1:8000");
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
+    credentials: "include",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
@@ -168,6 +174,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  getAuthSession: () => request<AuthSession>("/auth/session"),
+  login: (pairingCode: string) =>
+    request<AuthSession>("/auth/login", { method: "POST", body: JSON.stringify({ pairing_code: pairingCode }) }),
+  logout: () => request<AuthSession>("/auth/logout", { method: "POST" }),
   getHealth: () => request<HealthResponse>("/health"),
 
   listAutomations: (params?: {

@@ -23,8 +23,8 @@ class QuietHandler(SimpleHTTPRequestHandler):
 
 class PilotEdgeE2ETests(unittest.TestCase):
     @unittest.skipUnless(
-        os.getenv("RELATPY_RUN_EDGE_E2E") == "1",
-        "Set RELATPY_RUN_EDGE_E2E=1 to run the real Edge smoke",
+        os.getenv("NEXER_RUN_EDGE_E2E") == "1",
+        "Set NEXER_RUN_EDGE_E2E=1 to run the real Edge smoke",
     )
     def test_local_pilot_downloads_and_validates_file(self):
         recipe = validate_recipe(
@@ -44,14 +44,14 @@ class PilotEdgeE2ETests(unittest.TestCase):
   <body>
     <label>Empresa <input id="company"></label>
     <button id="prepare" onclick="document.body.dataset.company=document.getElementById('company').value">Preparar</button>
-    <a id="download" href="/relatpy-pilot.xlsx" download>Baixar relatório</a>
+    <a id="download" href="/nexer-pilot.xlsx" download>Baixar relatório</a>
   </body>
 </html>
 """,
                 encoding="utf-8",
             )
-            (root_path / "relatpy-pilot.xlsx").write_bytes(
-                b"PK\x03\x04RelatPy pilot test"
+            (root_path / "nexer-pilot.xlsx").write_bytes(
+                b"PK\x03\x04Nexer pilot test"
             )
 
             server = ThreadingHTTPServer(
@@ -89,7 +89,7 @@ class PilotEdgeE2ETests(unittest.TestCase):
 
                 self.assertEqual(result.completed_steps, 5)
                 self.assertIsNone(result.failed_step_id)
-                artifact = root_path / "downloads" / "edge-e2e" / "relatpy-pilot.xlsx"
+                artifact = root_path / "downloads" / "edge-e2e" / "nexer-pilot.xlsx"
                 self.assertTrue(artifact.is_file())
                 self.assertGreater(artifact.stat().st_size, 0)
                 self.assertTrue(any(e["type"] == "checkpoint" for e in events))

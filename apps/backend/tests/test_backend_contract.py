@@ -1,6 +1,6 @@
 import unittest
 
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 
 from app.main import app
 
@@ -16,7 +16,7 @@ class BackendContractTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"name": "RelatPy API", "version": "0.1.0"},
+            {"name": "Nexer API", "version": "0.1.0"},
         )
 
     def test_version_exposes_version(self):
@@ -25,7 +25,7 @@ class BackendContractTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"api": "RelatPy API", "version": "0.1.0"},
+            {"api": "Nexer API", "version": "0.1.0"},
         )
 
     def test_metrics_exposes_safe_runtime_metrics(self):
@@ -33,7 +33,7 @@ class BackendContractTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         body = response.json()
-        self.assertEqual(body["service"], "relatpy-api")
+        self.assertEqual(body["service"], "nexer-api")
         self.assertEqual(body["version"], "0.1.0")
         self.assertIsInstance(body["requests_total"], int)
         self.assertGreaterEqual(body["requests_total"], 1)

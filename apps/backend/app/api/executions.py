@@ -1,4 +1,8 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
+
+from app.execution_credentials import bind_execution_credentials
+from app.security import SESSION_COOKIE_NAME
+from app.worker_channel import worker_channel
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -89,8 +93,16 @@ def _to_read(execution: Execution, items: list[ExecutionAutomation]) -> Executio
     )
 
 
+def require_validated_corporate_auth(payload: ExecutionCreate) -> None:
+    """Trusted server policy. No request flag can approve a corporate adapter."""
+    if payload.corporate_credentials:
+        raise ApiError(409, "CORPORATE_AUTH_NOT_VALIDATED",
+            "Integração corporativa ainda não validada; nenhuma credencial foi armazenada.")
+
+
 @router.post("", response_model=ExecutionRead, status_code=201)
-def create_execution(payload: ExecutionCreate, db: Session = Depends(get_db)):
+def create_execution(payload: ExecutionCreate, request: Request, db: Session = Depends(get_db),
+                     corporate_policy: None = Depends(require_validated_corporate_auth)):
     automations = db.scalars(
         select(Automation).where(Automation.id.in_(payload.automation_ids))
     ).all()
@@ -104,6 +116,12 @@ def create_execution(payload: ExecutionCreate, db: Session = Depends(get_db)):
             "Automation not found",
             {"ids": missing},
         )
+
+    if payload.corporate_credentials:
+        selected_systems = {automation.system for automation in automations}
+        if not set(payload.corporate_credentials).issubset(selected_systems):
+            raise ApiError(422, "CREDENTIAL_SYSTEM_MISMATCH",
+                           "Credenciais não correspondem às automações selecionadas.")
 
     versions: dict[int, int] = {}
     for automation_id in payload.automation_ids:
@@ -151,8 +169,26 @@ def create_execution(payload: ExecutionCreate, db: Session = Depends(get_db)):
         cancel_requested=False,
     )
     db.add(execution)
+    bound_execution_id = None
     try:
         db.flush()
+        if payload.corporate_credentials:
+            bound_execution_id = execution.id
+            systems = {
+                system: {"username": credentials.username.get_secret_value(),
+                         "password": credentials.password.get_secret_value()}
+                for system, credentials in payload.corporate_credentials.items()
+            }
+            try:
+                bind_execution_credentials(execution.id,
+                    request.cookies.get(SESSION_COOKIE_NAME), systems, db)
+            except (RuntimeError, ValueError):
+                raise ApiError(409, "CREDENTIALS_UNAVAILABLE",
+                               "Credenciais temporárias indisponíveis.") from None
+            finally:
+                for credentials in systems.values():
+                    credentials.clear()
+                systems.clear()
         for automation_id in payload.automation_ids:
             db.add(
                 ExecutionAutomation(
@@ -165,13 +201,14 @@ def create_execution(payload: ExecutionCreate, db: Session = Depends(get_db)):
                 )
             )
         db.commit()
-    except IntegrityError as exc:
+    except Exception as exc:
+        if bound_execution_id is not None:
+            worker_channel.revoke(bound_execution_id)
         db.rollback()
-        raise ApiError(
-            409,
-            "EXECUTION_CREATE_CONFLICT",
-            "Execution could not be created",
-        ) from exc
+        if isinstance(exc, IntegrityError):
+            raise ApiError(409, "EXECUTION_CREATE_CONFLICT",
+                           "Execution could not be created") from None
+        raise
 
     db.refresh(execution)
     return _to_read(execution, get_items(db, execution.id))
@@ -225,6 +262,8 @@ def cancel_execution(execution_id: int, db: Session = Depends(get_db)):
         )
 
     execution.cancel_requested = True
+    from app.worker_channel import worker_channel
+    worker_channel.revoke(execution_id)
     items = get_items(db, execution.id)
     now = utcnow()
 

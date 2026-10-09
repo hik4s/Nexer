@@ -1,10 +1,10 @@
-# RelatPy — Estado Atual
+# Nexer — Estado Atual
 
 > Fonte operacional para retomada do desenvolvimento. Não substitui o Master Plan.
 
 ## Snapshot
 
-- Produto: RelatPy
+- Produto: Nexer
 - Trilha: Etapa 1 — Fundação, documentação e núcleo executável
 - Branch de desenvolvimento: `feat/etapa1-foundation`
 - Legado: permanece em `master`; não alterar durante a migração
@@ -91,7 +91,7 @@
 4. criar diagnóstico de autenticação;
 5. criar gestão de destinos no frontend;
 6. criar API/frontend para criação e manutenção de receitas;
-7. iniciar RelatPy Studio com editor declarativo;
+7. iniciar Nexer Studio com editor declarativo;
 8. ampliar watchdog, retry e checkpoints;
 9. migrar uma automação real dos relatórios atuais, somente após piloto sintético estável;
 10. preparar o gate formal da Etapa 1.
@@ -116,7 +116,7 @@
 - Frontend production build: OK.
 - Fix committed and pushed as `328624db3c17d809584b2ade0e5beeaa9dc7eee9`.
 - GitHub Actions run 277 is currently in progress; do not treat CI as green until it finishes.
-- Local clone used for validation: `C:\Users\kis\Downloads\RelatPy-Next-Git`.
+- Local clone used for validation: `C:\Users\kis\Downloads\Nexer-Git`.
 
 ## Latest dependency/auth verification - 2026-10-08
 
@@ -177,7 +177,7 @@
 
 ## Current CI evidence - 2026-10-08
 
-- GitHub Actions `RelatPy CI` run 293 (`37821114007`) for commit `e76618a93d7566befc089ef63680cc2b1d1b89e2` completed successfully.
+- GitHub Actions `Nexer CI` run 293 (`37821114007`) for commit `e76618a93d7566befc089ef63680cc2b1d1b89e2` completed successfully.
 - Python and frontend jobs completed successfully, including Python dependency security audit and frontend dependency audit.
 
 ## Final evidence for Studio block - 2026-10-08

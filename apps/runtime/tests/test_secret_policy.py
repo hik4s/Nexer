@@ -20,14 +20,14 @@ class ResolverSecretPolicyTests(unittest.TestCase):
             },
             values={
                 "password": {
-                    "credential_ref": "relatpy/sgind/password",
+                    "credential_ref": "nexer/sgind/password",
                 }
             },
             secret_provider=provider,
         )
 
         self.assertEqual(resolver.resolve("{{password}}"), "secret-value")
-        provider.get.assert_called_once_with("relatpy/sgind/password")
+        provider.get.assert_called_once_with("nexer/sgind/password")
 
     def test_secret_variable_rejects_inline_value(self):
         resolver = VariableResolver(
@@ -61,7 +61,7 @@ class ResolverSecretPolicyTests(unittest.TestCase):
             },
             values={
                 "password": {
-                    "credential_ref": "relatpy/sgind/password",
+                    "credential_ref": "nexer/sgind/password",
                 }
             },
             secret_provider=provider,

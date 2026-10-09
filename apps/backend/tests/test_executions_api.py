@@ -5,7 +5,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -23,7 +23,7 @@ class ExecutionsApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
-        db_path = Path(cls.tmp.name) / "relatpy.db"
+        db_path = Path(cls.tmp.name) / "nexer.db"
 
         config = Config(str(BACKEND_ROOT / "alembic.ini"))
         config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
@@ -100,6 +100,24 @@ class ExecutionsApiTests(unittest.TestCase):
             return automation.id
         finally:
             db.close()
+
+    def test_corporate_credentials_are_rejected_until_adapter_validated(self):
+        from sqlalchemy import select, func
+        automation_id = self._seed_published_automation()
+        response = self.client.post("/executions", json={
+            "name": "Corporate test", "automation_ids": [automation_id],
+            "corporate_credentials": {"SGIND": {"username": "canary-user", "password": "canary-secret"}}})
+        self.assertEqual(response.status_code, 409)
+        self.assertNotIn("canary", response.text)
+        with self.session_factory() as db:
+            self.assertEqual(db.scalar(select(func.count()).select_from(Execution)), 0)
+
+    def test_corporate_envelope_repr_hides_secrets(self):
+        from app.schemas_execution import ExecutionCreate
+        payload = ExecutionCreate(name="Safe", automation_ids=[1],
+            corporate_credentials={"SGIND": {"username": "canary-user", "password": "canary-secret"}})
+        self.assertNotIn("canary", repr(payload))
+        self.assertEqual(payload.corporate_credentials["SGIND"].password.get_secret_value(), "canary-secret")
 
     def test_create_and_read_execution(self):
         automation_id = self._seed_published_automation()

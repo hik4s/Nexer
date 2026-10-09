@@ -9,7 +9,7 @@ export function useExecutionEvents(executionId: number | null) {
   useEffect(() => {
     if (executionId == null) return;
 
-    const source = new EventSource(executionEventsUrl(executionId));
+    const source = new EventSource(executionEventsUrl(executionId), { withCredentials: true });
 
     source.onopen = () => setConnected(true);
     source.onerror = () => setConnected(false);

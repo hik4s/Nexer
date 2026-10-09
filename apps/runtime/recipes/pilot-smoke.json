@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "name": "RelatPy Local Pilot",
+  "name": "Nexer Local Pilot",
   "variables": {
     "base_url": {
       "type": "string",
@@ -34,12 +34,12 @@
       "id": "download",
       "action": "download",
       "selector": "#download",
-      "filename": "relatpy-pilot.xlsx"
+      "filename": "nexer-pilot.xlsx"
     },
     {
       "id": "validate",
       "action": "validate_file",
-      "path": "relatpy-pilot.xlsx",
+      "path": "nexer-pilot.xlsx",
       "min_size": 1,
       "extensions": [".xlsx"]
     }

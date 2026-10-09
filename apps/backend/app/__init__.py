@@ -1,1 +1,1 @@
-"""RelatPy backend application package."""
+"""Nexer backend application package."""

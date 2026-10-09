@@ -627,7 +627,7 @@ async def baixar_todos_os_relatorios(
     )
 
     canal_navegador = os.environ.get(
-        "RELATPY_BROWSER_CHANNEL",
+        "NEXER_BROWSER_CHANNEL",
         "msedge",
     )
 

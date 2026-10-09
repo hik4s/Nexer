@@ -5,7 +5,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -13,8 +13,8 @@ from app.database import get_db
 from app.main import app
 from app.models import Execution, ExecutionAutomation
 from app.enums import ExecutionAutomationStatus, ExecutionStatus
-from relatpy_worker.processor import WorkerExecutionProcessor
-from relatpy_worker.service import WorkerService
+from nexer_worker.processor import WorkerExecutionProcessor
+from nexer_worker.service import WorkerService
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]

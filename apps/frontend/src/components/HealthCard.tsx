@@ -15,7 +15,7 @@ export function HealthCard({
 
   if (isLoading) {
     title = "Verificando ambiente…";
-    detail = "Consultando a RelatPy API";
+    detail = "Consultando a Nexer API";
     statusClass = "status status--pending";
   } else if (isError) {
     title = "Não foi possível verificar a API";

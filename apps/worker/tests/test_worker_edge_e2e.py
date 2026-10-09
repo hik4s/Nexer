@@ -16,8 +16,8 @@ from sqlalchemy.orm import sessionmaker
 from app.enums import ExecutionAutomationStatus, ExecutionStatus
 from app.models import Automation, AutomationVersion, Execution, ExecutionAutomation
 from browser_manager import BrowserManager
-from relatpy_worker.processor import WorkerExecutionProcessor
-from relatpy_worker.service import WorkerService
+from nexer_worker.processor import WorkerExecutionProcessor
+from nexer_worker.service import WorkerService
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2] / "backend"
@@ -30,8 +30,8 @@ class QuietHandler(SimpleHTTPRequestHandler):
 
 class WorkerEdgeE2ETests(unittest.TestCase):
     @unittest.skipUnless(
-        os.getenv("RELATPY_RUN_EDGE_E2E") == "1",
-        "Set RELATPY_RUN_EDGE_E2E=1 to run the real Worker + Edge smoke",
+        os.getenv("NEXER_RUN_EDGE_E2E") == "1",
+        "Set NEXER_RUN_EDGE_E2E=1 to run the real Worker + Edge smoke",
     )
     @classmethod
     def setUpClass(cls):
@@ -60,14 +60,14 @@ class WorkerEdgeE2ETests(unittest.TestCase):
 <html lang="pt-BR">
   <body>
     <input id="company">
-    <a id="download" href="/relatpy-pilot.xlsx" download>Baixar</a>
+    <a id="download" href="/nexer-pilot.xlsx" download>Baixar</a>
   </body>
 </html>
 """,
             encoding="utf-8",
         )
-        (cls.web_root / "relatpy-pilot.xlsx").write_bytes(
-            b"PK\x03\x04RelatPy worker e2e"
+        (cls.web_root / "nexer-pilot.xlsx").write_bytes(
+            b"PK\x03\x04Nexer worker e2e"
         )
 
         cls.server = ThreadingHTTPServer(
@@ -142,12 +142,12 @@ class WorkerEdgeE2ETests(unittest.TestCase):
                                 "id": "download",
                                 "action": "download",
                                 "selector": "#download",
-                                "filename": "relatpy-pilot.xlsx",
+                                "filename": "nexer-pilot.xlsx",
                             },
                             {
                                 "id": "validate",
                                 "action": "validate_file",
-                                "path": "relatpy-pilot.xlsx",
+                                "path": "nexer-pilot.xlsx",
                                 "min_size": 1,
                                 "extensions": [".xlsx"],
                             },
@@ -227,7 +227,7 @@ class WorkerEdgeE2ETests(unittest.TestCase):
             / "downloads"
             / str(execution_id)
             / "1"
-            / "relatpy-pilot.xlsx"
+            / "nexer-pilot.xlsx"
         )
         self.assertTrue(artifact.is_file())
         self.assertGreater(artifact.stat().st_size, 0)

@@ -20,7 +20,7 @@ from app.models import (
     ExecutionAutomation,
     Worker,
 )
-from relatpy_worker.service import WorkerService
+from nexer_worker.service import WorkerService
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2] / "backend"
@@ -32,7 +32,7 @@ class WorkerServiceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
-        db_path = Path(cls.tmp.name) / "relatpy-worker.db"
+        db_path = Path(cls.tmp.name) / "nexer-worker.db"
 
         config = Config(str(BACKEND_ROOT / "alembic.ini"))
         config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")

@@ -21,13 +21,13 @@ class WorkerAppBootstrapTests(unittest.TestCase):
         self.assertIs(app.browser_manager, browser)
         self.assertIsNotNone(app.loop)
 
-    def test_page_factory_restores_saved_session_state(self):
+    def test_page_factory_discards_saved_session_state(self):
         browser = Mock()
         browser.create_page.return_value = object()
         session_store = Mock()
         session_store.load.return_value = {"cookies": [], "origins": []}
 
-        with patch("main.SessionStateStore", return_value=session_store), patch(
+        with patch("session_store.SessionStateStore", return_value=session_store), patch(
             "main.WorkerService"
         ), patch("main.WorkerExecutionProcessor") as processor, patch("main.WorkerLoop"):
             build_worker(browser_manager=browser)
@@ -39,11 +39,27 @@ class WorkerAppBootstrapTests(unittest.TestCase):
 
         page_factory(execution, item, recipe)
 
-        session_store.load.assert_called_once_with("portal-a")
-        browser.create_page.assert_called_once_with(
-            "12-3",
-            storage_state={"cookies": [], "origins": []},
-        )
+        session_store.load.assert_not_called()
+        browser.create_page.assert_called_once_with("12-3")
+
+
+
+    def test_corporate_factory_uses_restricted_manager_method(self):
+        class Manager:
+            def start(self):
+                pass
+            def create_monitored_corporate_page(self, system, *, authorize):
+                authorize()
+                return {"system": system, "restricted": True}
+        from unittest.mock import patch
+        with patch("main.WorkerService"), patch("main.WorkerExecutionProcessor") as processor, patch("main.WorkerLoop"):
+            build_worker(browser_manager=Manager())
+        self.assertIn("corporate_page_factory", processor.call_args.kwargs)
+        calls = []
+        factory = processor.call_args.kwargs["corporate_page_factory"]
+        result = factory("IQOS", lambda: calls.append("authorized"))
+        self.assertEqual(result, {"system": "IQOS", "restricted": True})
+        self.assertEqual(calls, ["authorized"])
 
 
 if __name__ == "__main__":

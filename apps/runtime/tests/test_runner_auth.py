@@ -44,5 +44,30 @@ class RunnerAuthenticationTests(unittest.TestCase):
         auth_guard.ensure_authenticated.assert_called_once_with(page)
 
 
+
+    def test_revocation_between_attempts_prevents_retry_action(self):
+        class Page:
+            attempts = 0
+            def locator(self, selector):
+                return self
+            def click(self, **kwargs):
+                self.attempts += 1
+                raise RuntimeError("transient")
+        page = Page()
+        class Guard:
+            def ensure_authenticated(self, current):
+                if current.attempts:
+                    raise RuntimeError("CORPORATE_CONTEXT_REVOKED")
+                return current
+        context = ExecutionContext(page=page, variables={}, downloads_dir=".", auth_guard=Guard())
+        recipe = {"schema_version": 1, "name": "Revocation", "variables": {},
+                  "steps": [{"id": "click", "action": "click", "selector": "#report",
+                             "retry": {"max_attempts": 2, "backoff_ms": 0}}],
+                  "output": {"type": "file"}}
+        with self.assertRaisesRegex(RuntimeError, "^CORPORATE_CONTEXT_REVOKED$"):
+            RecipeRunner().run(recipe, context)
+        self.assertEqual(page.attempts, 1)
+
+
 if __name__ == "__main__":
     unittest.main()

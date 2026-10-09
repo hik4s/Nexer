@@ -1,6 +1,6 @@
 import unittest
 
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 
 from app.config import Settings
 from app.main import app
@@ -12,7 +12,7 @@ class BackendSafetyContractTests(unittest.TestCase):
         cls.client = TestClient(app)
 
     def test_local_configuration_defaults_are_safe(self):
-        settings = Settings()
+        settings = Settings(_env_file=None, environment="local")
 
         self.assertEqual(settings.host, "127.0.0.1")
         self.assertEqual(settings.port, 8000)

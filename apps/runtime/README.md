@@ -1,6 +1,6 @@
-# RelatPy Runtime
+# Nexer Runtime
 
-Interpretador declarativo das receitas do RelatPy.
+Interpretador declarativo das receitas do Nexer.
 
 Escopo inicial da Etapa 1:
 - schema de receita v1;

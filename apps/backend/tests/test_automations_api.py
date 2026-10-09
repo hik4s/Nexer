@@ -4,7 +4,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -19,7 +19,7 @@ class AutomationsApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
-        db_path = Path(cls.tmp.name) / "relatpy.db"
+        db_path = Path(cls.tmp.name) / "nexer.db"
 
         config = Config(str(BACKEND_ROOT / "alembic.ini"))
         config.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")

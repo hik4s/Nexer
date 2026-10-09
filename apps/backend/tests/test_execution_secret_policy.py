@@ -4,7 +4,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
-from fastapi.testclient import TestClient
+from test_client import AuthenticatedTestClient as TestClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -129,7 +129,7 @@ class ExecutionSecretPolicyTests(unittest.TestCase):
                 "inputs": {
                     "username": "user",
                     "password": {
-                        "credential_ref": "relatpy/sgind/password",
+                        "credential_ref": "nexer/sgind/password",
                     },
                 },
                 "test_mode": True,
@@ -139,7 +139,7 @@ class ExecutionSecretPolicyTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(
             response.json()["inputs"]["password"]["credential_ref"],
-            "relatpy/sgind/password",
+            "nexer/sgind/password",
         )
 
 
