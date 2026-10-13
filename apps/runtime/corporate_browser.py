@@ -56,7 +56,7 @@ class CorporateBrowserPolicy:
         # now and close from the next outer worker/policy check instead.
         self._revoked = True
 
-    def _request(self, route):
+    def _request(self, route, _request=None):
         response = None
         try:
             self.check()

@@ -227,3 +227,71 @@ class MonitoredCorporatePageTests(unittest.TestCase):
     def test_browser_launch_suppresses_edge_internal_download_hub(self):
         self.create()
         self.assertIn("--disable-features=msDownloadsHub", self.browser.launch_options["args"])
+
+    def test_slow_authorization_failure_interrupts_pending_operation_and_cleans_threads(self):
+        from monitored_browser import MonitoredCorporatePage
+        slow = threading.Event()
+        entered = threading.Event()
+        release = threading.Event()
+        browser = FakePlaywright()
+        def authorize():
+            if slow.is_set():
+                entered.set()
+                if not release.wait(2):
+                    raise RuntimeError("synthetic-channel-timeout")
+                raise RuntimeError("synthetic-channel-revoked")
+        page = MonitoredCorporatePage("SGIND", authorize=authorize,
+            playwright_factory=lambda: browser, poll_seconds=0.02)
+        self.addCleanup(page.close)
+        slow.set()
+        try:
+            self.assertTrue(entered.wait(1))
+            timer = threading.Timer(0.15, release.set)
+            timer.start()
+            with self.assertRaisesRegex(RuntimeError, "^CORPORATE_BROWSER_OPERATION_FAILED$"):
+                page.locator("#pending").click()
+            timer.join()
+            self.assertTrue(browser.context.closed.is_set())
+        finally:
+            release.set()
+            page.close()
+        self.assertFalse(page.is_alive())
+        self.assertTrue(browser.stopped.is_set())
+
+    def test_simultaneous_operations_are_interrupted_and_all_owned_threads_end(self):
+        page = self.create()
+        completed = []
+        barrier = threading.Barrier(5)
+        def pending():
+            barrier.wait(timeout=2)
+            try:
+                page.locator("#pending").click()
+            except RuntimeError as exc:
+                completed.append(str(exc))
+        callers = [threading.Thread(target=pending) for _ in range(4)]
+        for caller in callers:
+            caller.start()
+        try:
+            barrier.wait(timeout=2)
+            self.active = False
+            for caller in callers:
+                caller.join(timeout=2)
+            self.assertTrue(all(not caller.is_alive() for caller in callers))
+            self.assertEqual(completed, ["CORPORATE_BROWSER_OPERATION_FAILED"] * 4)
+        finally:
+            page.close()
+            for caller in callers:
+                caller.join(timeout=2)
+        self.assertFalse(page.is_alive())
+
+    def test_repeated_start_close_does_not_retain_owned_threads(self):
+        def owned():
+            return {thread.ident for thread in threading.enumerate()
+                    if thread.name.startswith(("nexer-corporate-browser", "nexer-revocation"))}
+        before = owned()
+        for _ in range(3):
+            self.create().close()
+        deadline = time.monotonic() + 2
+        while owned() != before and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertEqual(owned(), before)

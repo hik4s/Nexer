@@ -1,5 +1,6 @@
 """Loopback-only worker channel. Capability is supplied through inherited stdin."""
 import json
+import re
 from urllib.parse import urlsplit
 from urllib.request import Request, build_opener, ProxyHandler, HTTPRedirectHandler
 
@@ -41,7 +42,7 @@ class ExecutionCredentialClient:
             raise RuntimeError("CREDENTIALS_UNAVAILABLE") from None
 
     def resolve(self, execution_id, system):
-        if type(execution_id) is not int or execution_id <= 0 or system not in {"SGIND", "IQOS"}:
+        if type(execution_id) is not int or execution_id <= 0 or not isinstance(system, str) or (system not in {"SGIND", "IQOS"} and not re.fullmatch(r"profile-[1-9][0-9]*-v[1-9][0-9]*", system)):
             raise RuntimeError("CREDENTIALS_UNAVAILABLE")
         result = self._request(f"/internal/credentials/{execution_id}/{system}")
         if (not isinstance(result, dict) or set(result) != {"username", "password"}

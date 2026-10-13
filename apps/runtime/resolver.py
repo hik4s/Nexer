@@ -39,7 +39,7 @@ class VariableResolver:
     def validate_required(self) -> None:
         for name, declaration in self.declarations.items():
             if declaration.get("required", True):
-                if name not in self.values or self._is_empty(self.values[name]):
+                if self._missing(name, declaration):
                     raise VariableResolutionError("MISSING_VARIABLE")
 
     def _value_for(self, name: str):
@@ -47,7 +47,7 @@ class VariableResolver:
         if declaration is None:
             raise VariableResolutionError("UNDECLARED_VARIABLE")
 
-        if name not in self.values or self._is_empty(self.values[name]):
+        if self._missing(name, declaration):
             raise VariableResolutionError("MISSING_VARIABLE")
 
         value = self.values[name]
@@ -68,10 +68,10 @@ class VariableResolver:
 
         return value
 
-    @staticmethod
-    def _is_empty(value) -> bool:
-        return value is None or (isinstance(value, str) and value == "")
-
+    def _missing(self, name, declaration):
+        if name not in self.values or self.values[name] is None:
+            return True
+        return self.values[name] == "" and declaration.get("allow_empty") is not True
 
 def _type_matches(value, expected: str) -> bool:
     if expected == "string":
@@ -82,4 +82,6 @@ def _type_matches(value, expected: str) -> bool:
         return isinstance(value, (int, float)) and not isinstance(value, bool)
     if expected == "boolean":
         return isinstance(value, bool)
+    if expected == "array":
+        return isinstance(value, list) and all(isinstance(item, str) for item in value)
     return True

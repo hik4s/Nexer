@@ -1,4 +1,6 @@
 import hashlib
+from fnmatch import fnmatchcase
+import re
 import time
 from pathlib import Path, PurePath
 
@@ -35,7 +37,122 @@ def create_default_registry() -> ActionRegistry:
     registry.register("switch_tab", _switch_tab)
     registry.register("download", _download)
     registry.register("validate_file", _validate_file)
+    registry.register("check", _check)
+    registry.register("set_value", _set_value)
+    registry.register("choose", _choose)
+    registry.register("choose_radio", _choose_radio)
+    registry.register("scroll", _scroll)
+    registry.register("hover", _hover)
+    registry.register("drag", _drag)
+    registry.register("close_tab", _close_tab)
     return registry
+
+
+def _scope(step, context):
+    scope = context.page
+    for selector in step.get("frames", []):
+        scope = scope.frame_locator(context.resolve(selector))
+    return scope
+
+
+def _locator(step, context):
+    return _scope(step, context).locator(context.resolve(step["selector"]))
+
+
+def _control(step, context, operation):
+    context.event("action.started", action=step["action"], step_id=step["id"])
+    if not context.dry_run:
+        operation(_locator(step, context))
+    context.event("action.finished", action=step["action"], step_id=step["id"])
+
+
+def _check(step, context):
+    value = context.resolve(step["value"])
+    if type(value) is not bool:
+        raise ActionExecutionError("CHECK_VALUE_INVALID")
+    _control({"action": "check", **step}, context, lambda locator: locator.set_checked(value, timeout=step.get("timeout_ms", 30000)))
+
+
+def _set_value(step, context):
+    value = context.resolve(step["value"])
+    kind = step["input_type"]
+    if not isinstance(value, str):
+        raise ActionExecutionError("INPUT_VALUE_INVALID")
+    if kind == "color" and not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+        raise ActionExecutionError("INPUT_VALUE_INVALID")
+    if kind == "range" and not re.fullmatch(r"-?(?:\d+(?:\.\d+)?|\.\d+)", value):
+        raise ActionExecutionError("INPUT_VALUE_INVALID")
+    def apply(locator):
+        locator.evaluate("""(element, data) => {
+            if (!(element instanceof HTMLInputElement) || element.type !== data.kind || !['range', 'color'].includes(data.kind)) throw new Error('INPUT_TYPE_INVALID');
+            const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+            setter.call(element, data.value);
+            if (data.kind === 'range' && Number(element.value) !== Number(data.value)) throw new Error('INPUT_VALUE_OUT_OF_RANGE');
+            element.dispatchEvent(new Event('input', {bubbles: true}));
+            element.dispatchEvent(new Event('change', {bubbles: true}));
+        }""", {"kind": kind, "value": value})
+    _control({"action": "set_value", **step}, context, apply)
+
+
+def _choose(step, context):
+    value = context.resolve(step["value"])
+    if not isinstance(value, str):
+        raise ActionExecutionError("CHOICE_VALUE_INVALID")
+    _control({"action": "choose", **step}, context,
+             lambda locator: locator.get_by_role("option", name=value, exact=True).click(timeout=step.get("timeout_ms", 30000)))
+
+
+def _choose_radio(step, context):
+    value = context.resolve(step["value"])
+    if not isinstance(value, str):
+        raise ActionExecutionError("CHOICE_VALUE_INVALID")
+    def apply(locator):
+        options = locator.locator('input[type="radio"]')
+        indexes = options.evaluate_all("""(elements, data) => {
+            const groups = [];
+            return elements.flatMap((element, index) => {
+                const identity = element.name || element;
+                if (!groups.includes(identity)) groups.push(identity);
+                return groups.indexOf(identity) === data.group && element.value === data.value ? [index] : [];
+            });
+        }""", {"value": value, "group": step.get("group_index", 0)})
+        if len(indexes) != 1:
+            raise ActionExecutionError("RADIO_OPTION_NOT_UNIQUE")
+        options.nth(indexes[0]).check(timeout=step.get("timeout_ms", 30000))
+    _control({"action": "choose_radio", **step}, context, apply)
+
+
+def _scroll(step, context):
+    def apply(locator):
+        locator.evaluate("""(element, position) => {
+            const target = element === document.documentElement || element === document.body ? document.scrollingElement : element;
+            target.scrollTo({left: position.x, top: position.y, behavior: 'instant'});
+        }""", {"x": step["x"], "y": step["y"]})
+    _control({"action": "scroll", **step}, context, apply)
+
+
+def _hover(step, context):
+    _control({"action": "hover", **step}, context, lambda locator: locator.hover(timeout=step.get("timeout_ms", 30000)))
+
+
+def _drag(step, context):
+    _control({"action": "drag", **step}, context,
+             lambda locator: locator.drag_to(_scope(step, context).locator(context.resolve(step["target_selector"])), timeout=step.get("timeout_ms", 30000)))
+
+
+def _close_tab(step, context):
+    context.event("action.started", action="close_tab", step_id=step["id"])
+    if not context.dry_run:
+        browser_context = context.page.context
+        if not context.page.is_closed():
+            if len(browser_context.pages) < 2:
+                raise ActionExecutionError("LAST_TAB_CLOSE_FORBIDDEN")
+            context.page.close()
+        pages = [page for page in browser_context.pages if not page.is_closed()]
+        if not pages:
+            raise ActionExecutionError("TAB_NOT_FOUND")
+        context.page = pages[0]
+    context.event("action.finished", action="close_tab", step_id=step["id"])
 
 
 def _navigate(step, context):
@@ -58,9 +175,11 @@ def _click(step, context):
     selector = context.resolve(step["selector"])
     context.event("action.started", action="click", step_id=step["id"])
     if not context.dry_run:
-        context.page.locator(selector).click(
-            timeout=step.get("timeout_ms", 30000)
-        )
+        options = {"timeout": step.get("timeout_ms", 30000)}
+        for key in ("button", "click_count"):
+            if key in step:
+                options[key] = step[key]
+        _locator(step, context).click(**options)
     context.event("action.finished", action="click", step_id=step["id"])
 
 
@@ -69,7 +188,7 @@ def _fill(step, context):
     value = context.resolve(step["value"])
     context.event("action.started", action="fill", step_id=step["id"])
     if not context.dry_run:
-        context.page.locator(selector).fill(
+        _locator(step, context).fill(
             str(value),
             timeout=step.get("timeout_ms", 30000),
         )
@@ -81,7 +200,7 @@ def _select(step, context):
     value = context.resolve(step["value"])
     context.event("action.started", action="select", step_id=step["id"])
     if not context.dry_run:
-        context.page.locator(selector).select_option(str(value))
+        _locator(step, context).select_option(value if isinstance(value, list) else str(value))
     context.event("action.finished", action="select", step_id=step["id"])
 
 
@@ -90,7 +209,7 @@ def _press(step, context):
     value = context.resolve(step.get("key", "Enter"))
     context.event("action.started", action="press", step_id=step["id"])
     if not context.dry_run:
-        context.page.locator(selector).press(
+        _locator(step, context).press(
             str(value),
             timeout=step.get("timeout_ms", 30000),
         )
@@ -103,7 +222,7 @@ def _wait_for(step, context):
     timeout = step.get("timeout_ms", 30000)
     context.event("action.started", action="wait_for", step_id=step["id"])
     if not context.dry_run:
-        context.page.locator(selector).wait_for(state=state, timeout=timeout)
+        _locator(step, context).wait_for(state=state, timeout=timeout)
     context.event("action.finished", action="wait_for", step_id=step["id"])
 
 
@@ -117,7 +236,7 @@ def _wait_for_any(step, context):
         started = time.monotonic()
         while (time.monotonic() - started) * 1000 < timeout:
             for selector in selectors:
-                if context.page.locator(selector).is_visible():
+                if _scope(step, context).locator(selector).is_visible():
                     context.event(
                         "action.finished",
                         action="wait_for_any",
@@ -145,11 +264,36 @@ def _switch_tab(step, context):
     if context.dry_run:
         context.event("action.finished", action="switch_tab", step_id=step["id"])
         return None
+    deadline = time.monotonic() + step.get("timeout_ms", 30000) / 1000
+    while pages is not None and index >= len(pages) and time.monotonic() < deadline:
+        if context.is_cancellation_requested():
+            raise ActionExecutionError("EXECUTION_CANCELLED")
+        context.page.wait_for_timeout(100)
+        pages = browser_context.pages
     if pages is None or index >= len(pages):
         raise ActionExecutionError("TAB_NOT_FOUND")
     context.page = pages[index]
     context.event("action.finished", action="switch_tab", step_id=step["id"])
     return context.page
+
+
+def _matching_download(scope, collection, pattern):
+    rows = scope.locator(collection["rows"])
+    for index in range(rows.count()):
+        row = rows.nth(index)
+        if not row.is_visible():
+            continue
+        if collection["name"] == ":scope":
+            name = row.evaluate("""element => {
+                const copy = element.cloneNode(true);
+                copy.querySelectorAll('button,a,[role="button"],input,select,textarea,script,style').forEach(node => node.remove());
+                return (copy.textContent || '').replace(/\\s+/g, ' ').trim();
+            }""")
+        else:
+            name = row.locator(collection["name"]).inner_text(timeout=1000).strip()
+        if fnmatchcase(name, pattern):
+            return row.locator(collection["button"])
+    return None
 
 
 def _download(step, context):
@@ -166,9 +310,29 @@ def _download(step, context):
         raise ActionExecutionError("DOWNLOAD_API_UNAVAILABLE")
 
     target = context.downloads_dir / safe_name
+    locator = _locator(step, context)
+    if "collection" in step:
+        collection = {key: context.resolve(value) for key, value in step["collection"].items()}
+        pattern = collection["pattern"]
+        if not isinstance(pattern, str) or not pattern.strip() or len(pattern) > 2048:
+            raise ActionExecutionError("DOWNLOAD_PATTERN_INVALID")
+        deadline = time.monotonic() + step.get("timeout_ms", 30000) / 1000
+        while True:
+            if context.is_cancellation_requested():
+                raise ActionExecutionError("EXECUTION_CANCELLED")
+            locator = _matching_download(_scope(step, context), collection, pattern)
+            if locator is not None:
+                break
+            if time.monotonic() >= deadline:
+                raise ActionExecutionError("DOWNLOAD_MATCH_NOT_FOUND")
+            context.page.wait_for_timeout(250)
     with context.page.expect_download(timeout=step.get("timeout_ms", 30000)) as download_info:
-        context.page.locator(selector).click(timeout=step.get("click_timeout_ms", 30000))
+        locator.click(timeout=step.get("click_timeout_ms", 30000))
     download = download_info.value
+    if step.get("preserve_filename"):
+        target = context.downloads_dir / _safe_filename(download.suggested_filename)
+        if target.exists():
+            raise ActionExecutionError("DOWNLOAD_FILENAME_ALREADY_EXISTS")
     download.save_as(str(target))
 
     context.artifacts.append({"path": str(target), "type": "download"})

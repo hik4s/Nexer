@@ -81,6 +81,12 @@ class BrowserManager:
         from monitored_browser import MonitoredCorporatePage
         return MonitoredCorporatePage(system, authorize=authorize, headless=self.headless)
 
+    def create_monitored_login_page(self, configuration, *, authorize, accept_downloads=True):
+        from monitored_browser import MonitoredCorporatePage
+        from login_profiles import LoginBrowserPolicy
+        return MonitoredCorporatePage(None, authorize=authorize, headless=self.headless,
+            policy=LoginBrowserPolicy(configuration, authorize=authorize), accept_downloads=accept_downloads)
+
     def create_corporate_page(self, system, *, authorize):
         """Fresh restricted context; no storage state, traces or persistent profile."""
         from corporate_browser import CorporateBrowserPolicy

@@ -53,7 +53,7 @@ def worker(configuration):
     from nexer_worker.processor import WorkerExecutionProcessor
     from nexer_worker.credential_client import ExecutionCredentialClient
     from monitored_browser import MonitoredCorporatePage
-    from test_monitored_edge import AsyncFixturePlaywright, MonitoredHandler
+    from test_monitored_edge import AsyncFixturePlaywright, MonitoredHandler, trusted_fixture
     server = ThreadingHTTPServer(("127.0.0.1", 0), MonitoredHandler)
     server.started = threading.Event()
     server.release = threading.Event()
@@ -64,6 +64,12 @@ def worker(configuration):
         worker_id=configuration["worker_id"], pid=os.getpid())
     service.register()
     client = ExecutionCredentialClient(configuration["url"], configuration["capability"])
+    shutdown = threading.Event()
+    if configuration["scenario"] == "worker_stop":
+        def control():
+            sys.stdin.readline()
+            shutdown.set()
+        threading.Thread(target=control, daemon=True).start()
     def factory(system, authorize):
         fixture = AsyncFixturePlaywright(f"http://127.0.0.1:{server.server_port}")
         return MonitoredCorporatePage(system, authorize=authorize,
@@ -72,10 +78,12 @@ def worker(configuration):
         raise RuntimeError("UNRESTRICTED_BROWSER_FORBIDDEN")
     processor = WorkerExecutionProcessor(session_factory=SessionLocal, worker_service=service,
         page_factory=unrestricted, corporate_page_factory=factory,
-        credential_client=client, downloads_root=Path.cwd() / "downloads")
+        credential_client=client, shutdown_requested=shutdown.is_set,
+        downloads_root=Path.cwd() / "downloads")
     print(json.dumps({"worker_ready": True}), flush=True)
     try:
-        with patch("nexer_worker.processor.require_validated_adapter"):
+        with patch("nexer_worker.processor.require_validated_adapter"), trusted_fixture(
+                f"http://127.0.0.1:{server.server_port}"):
             deadline = time.monotonic() + 45
             while time.monotonic() < deadline:
                 service.heartbeat()

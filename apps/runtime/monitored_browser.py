@@ -9,10 +9,10 @@ from corporate_browser import CorporateBrowserPolicy
 
 class MonitoredCorporatePage:
     def __init__(self, system, *, authorize, headless=True,
-                 playwright_factory=async_playwright, poll_seconds=0.5):
+                 playwright_factory=async_playwright, poll_seconds=0.5, policy=None, accept_downloads=True):
         if not callable(authorize) or not 0 < poll_seconds <= 1:
             raise RuntimeError("CORPORATE_CONTEXT_UNAVAILABLE")
-        self.corporate_policy = CorporateBrowserPolicy(system, authorize=authorize)
+        self.corporate_policy = policy if policy is not None else CorporateBrowserPolicy(system, authorize=authorize)
         self._bridge = BrowserThread()
         self._monitor_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="nexer-revocation")
         self._closed = False
@@ -21,7 +21,7 @@ class MonitoredCorporatePage:
         self._context = None
         self._monitor = None
         try:
-            context = self._bridge.run(self._start(playwright_factory, headless))
+            context = self._bridge.run(self._start(playwright_factory, headless, accept_downloads))
             proxy = self._bridge.wrap(context)
             self.corporate_policy.install(proxy)
             self._page = proxy.new_page()
@@ -31,13 +31,13 @@ class MonitoredCorporatePage:
             self.close()
             raise RuntimeError("CORPORATE_CONTEXT_UNAVAILABLE") from None
 
-    async def _start(self, factory, headless):
+    async def _start(self, factory, headless, accept_downloads):
         self._playwright = await factory().start()
         self._browser = await self._playwright.chromium.launch(
             channel="msedge", headless=headless,
             args=["--disable-features=msDownloadsHub"])
         self._context = await self._browser.new_context(
-            accept_downloads=True, service_workers="block")
+            accept_downloads=accept_downloads, service_workers="block")
         return self._context
 
     async def _start_monitor(self, poll_seconds):

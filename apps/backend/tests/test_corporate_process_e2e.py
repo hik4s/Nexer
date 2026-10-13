@@ -1,5 +1,6 @@
 """Opt-in actual API and worker subprocesses, isolated DB and synthetic Edge pages."""
 import json
+from contextlib import closing
 import os
 from pathlib import Path
 import queue
@@ -49,7 +50,10 @@ class CorporateProcessTests(unittest.TestCase):
                     process.kill()
                     process.wait(timeout=5)
             if process.stdin and not process.stdin.closed:
-                process.stdin.close()
+                try:
+                    process.stdin.close()
+                except OSError:
+                    pass
         for reader in self.readers:
             reader.join(timeout=2)
         for process in self.processes:
@@ -66,7 +70,9 @@ class CorporateProcessTests(unittest.TestCase):
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         self.processes.append(process)
         process.stdin.write(json.dumps(self.configuration) + "\n")
-        process.stdin.close()
+        process.stdin.flush()
+        if mode != "worker" or self.configuration["scenario"] != "worker_stop":
+            process.stdin.close()
         messages = queue.Queue()
         def read():
             for line in process.stdout:
@@ -114,7 +120,7 @@ class CorporateProcessTests(unittest.TestCase):
     def wait_until_action(self):
         deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
-            with sqlite3.connect(self.database) as connection:
+            with closing(sqlite3.connect(self.database)) as connection:
                 count = connection.execute("SELECT COUNT(*) FROM events WHERE type='action.started'").fetchone()[0]
             if count:
                 return
@@ -143,12 +149,16 @@ class CorporateProcessTests(unittest.TestCase):
                 api.terminate()
                 api.wait(timeout=5)
                 _, client = self.start_api()
+            elif scenario == "worker_stop":
+                worker.stdin.write("stop\n")
+                worker.stdin.flush()
+                worker.stdin.close()
         result = self.wait_message(messages, "status")
         worker.wait(timeout=10)
         self.assertEqual(worker.returncode, 0)
         expected = "SUCCEEDED" if scenario == "success" else ("CANCELLED" if scenario == "cancel" else "FAILED")
         self.assertEqual(result["status"], expected)
-        with sqlite3.connect(self.database) as connection:
+        with closing(sqlite3.connect(self.database)) as connection:
             dump = "\n".join(connection.iterdump())
             item = connection.execute("SELECT status FROM execution_automations").fetchone()[0]
         self.assertEqual(item, expected)
@@ -175,3 +185,6 @@ class CorporateProcessTests(unittest.TestCase):
 
     def test_api_restart_invalidates_worker_credentials(self):
         self.run_scenario("restart")
+
+    def test_worker_shutdown_interrupts_pending_browser_with_api_still_alive(self):
+        self.run_scenario("worker_stop")

@@ -77,6 +77,7 @@ class Execution(Base):
     __tablename__ = "executions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    batch_id: Mapped[int | None] = mapped_column(ForeignKey("execution_batches.id"), index=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     requested_by: Mapped[str | None] = mapped_column(String(200))
     period_start: Mapped[datetime | None] = mapped_column(DateTime)
@@ -87,6 +88,7 @@ class Execution(Base):
     overwrite_existing: Mapped[bool] = mapped_column(default=False, nullable=False)
     test_mode: Mapped[bool] = mapped_column(default=False, nullable=False)
     inputs: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    login_profiles: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
@@ -197,4 +199,51 @@ class Checkpoint(Base):
     step_id: Mapped[str] = mapped_column(String(100), nullable=False)
     step_index: Mapped[int] = mapped_column(Integer, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+class LoginProfile(Base):
+    __tablename__ = "login_profiles"
+    group_id: Mapped[int | None] = mapped_column(ForeignKey("access_groups.id"), nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="DRAFT", nullable=False)
+    current_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+class ExecutionBatch(Base):
+    __tablename__ = "execution_batches"
+    __table_args__ = (UniqueConstraint("owner_key", "idempotency_key", name="uq_batch_idempotency"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    owner_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+class LoginProfileVersion(Base):
+    __tablename__ = "login_profile_versions"
+    __table_args__ = (UniqueConstraint("profile_id", "version", name="uq_login_profile_version"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    profile_id: Mapped[int] = mapped_column(ForeignKey("login_profiles.id"), nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    configuration: Mapped[dict] = mapped_column(JSON, nullable=False)
+    published_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+class AccessGroup(Base):
+    __tablename__ = "access_groups"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)
+
+
+class Routine(Base):
+    __tablename__ = "routines"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    items: Mapped[list] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, nullable=False)

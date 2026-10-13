@@ -75,7 +75,12 @@ export type CreateExecutionInput = {
   overwrite_existing?: boolean;
   test_mode?: boolean;
   inputs?: Record<string, unknown>;
+  profile_credentials?: Record<string, {username: string; password: string}>;
 };
+
+export type BatchFlowInput = {automation_id: number; version: number; inputs: Record<string, unknown>; test_mode: boolean};
+export type ExecutionBatch = {id: number; name: string; status: string; created_at: string; executions: Execution[]};
+export type CreateBatchInput = {name: string; idempotency_key: string; items: BatchFlowInput[]; profile_credentials?: Record<string, {username: string; password: string}>};
 
 export type Destination = {
   id: number;
@@ -130,6 +135,22 @@ export type AutomationVersionPublishResponse = {
   version: number;
   published: boolean;
   automation_status: string;
+};
+
+export type LoginTarget = {selector: string; frames: string[]};
+export type LoginConfiguration = {
+  login_url: string; allowed_origins: string[];
+  username_target: LoginTarget | null; password_target: LoginTarget | null; submit_target: LoginTarget | null;
+  success_rule: {kind: "marker" | "url"; target?: LoginTarget | null; url?: string | null} | null;
+};
+export type SiteLoginProfile = {id: number; name: string; group_id?: number | null; group_name?: string | null; status: string; current_version: number; configuration: LoginConfiguration; published: boolean};
+export type AccessGroup = {id: number; name: string};
+export type Routine = {id: number; name: string; items: {automation_id: number; version: number; inputs: Record<string, unknown>}[]};
+export type LoginRecording = {id: string; profile_id: number; version: number; status: string; targets: Partial<Record<"username_target" | "password_target" | "submit_target", LoginTarget>>; error: string | null};
+export type FlowRecording = {id: string; status: string; recipe: Record<string, unknown> | null; error: string | null};
+
+export type ReportOptionsResponse = {
+  fields: Record<string, {options: {value: string; label: string; disabled: boolean}[]; error: string | null}>;
 };
 
 export type DiagnosticsResponse = {
@@ -211,6 +232,34 @@ export const api = {
       body: JSON.stringify({ recipe, created_by: createdBy }),
     }),
 
+  getAutomationVersion: (automationId: number, version: number) =>
+    request<AutomationVersion>(`/automations/${automationId}/versions/${version}`),
+
+  listLoginProfiles: () => request<{items: SiteLoginProfile[]; total: number; limit: number; offset: number}>("/login-profiles"),
+  getLoginProfileVersion: (id: number, version: number) => request<SiteLoginProfile>(`/login-profiles/${id}/versions/${version}`),
+  createLoginProfile: (input: {name: string; login_url: string; group_id?: number; template_profile_id?: number}) => request<SiteLoginProfile>("/login-profiles", {method: "POST", body: JSON.stringify(input)}),
+  listAccessGroups: () => request<{items: AccessGroup[]}>("/access-groups"),
+  createAccessGroup: (name: string) => request<AccessGroup>("/access-groups", {method: "POST", body: JSON.stringify({name})}),
+  setAccessGroup: (id: number, group_id: number | null) => request<SiteLoginProfile>(`/login-profiles/${id}/group`, {method: "PUT", body: JSON.stringify({group_id})}),
+  listRoutines: () => request<{items: Routine[]}>("/routines"),
+  startFlowRecording: (url: string) => request<FlowRecording>("/flow-recordings", {method: "POST", body: JSON.stringify({url})}),
+  getFlowRecording: (id: string) => request<FlowRecording>(`/flow-recordings/${id}`),
+  finishFlowRecording: (id: string) => request<FlowRecording>(`/flow-recordings/${id}/finish`, {method: "POST"}),
+  cancelFlowRecording: (id: string) => request<FlowRecording>(`/flow-recordings/${id}/cancel`, {method: "POST"}),
+  getRoutine: (id: number) => request<Routine>(`/routines/${id}`),
+  saveRoutine: (input: Omit<Routine, "id">) => request<Routine>("/routines", {method: "POST", body: JSON.stringify(input)}),
+  deleteRoutine: (id: number) => request<void>(`/routines/${id}`, {method: "DELETE"}),
+  createLoginProfileVersion: (id: number, configuration: LoginConfiguration) => request<SiteLoginProfile>(`/login-profiles/${id}/versions`, {method: "POST", body: JSON.stringify(configuration)}),
+  publishLoginProfile: (id: number, version: number) => request<SiteLoginProfile>(`/login-profiles/${id}/publish`, {method: "POST", body: JSON.stringify({version})}),
+  disableLoginProfile: (id: number) => request<SiteLoginProfile>(`/login-profiles/${id}`, {method: "DELETE"}),
+  startLoginRecording: (id: number) => request<LoginRecording>(`/login-profiles/${id}/recordings`, {method: "POST"}),
+  getLoginRecording: (id: number, recordingId: string) => request<LoginRecording>(`/login-profiles/${id}/recordings/${recordingId}`),
+  cancelLoginRecording: (id: number, recordingId: string) => request<LoginRecording>(`/login-profiles/${id}/recordings/${recordingId}/cancel`, {method: "POST"}),
+  getReportOptions: (automationId: number, version: number, inputs: Record<string, unknown>, profileCredentials?: Record<string, {username: string; password: string}>) =>
+    request<ReportOptionsResponse>(`/automations/${automationId}/versions/${version}/input-options`, {
+      method: "POST", body: JSON.stringify({inputs, ...(profileCredentials ? {profile_credentials: profileCredentials} : {})}),
+    }),
+
   testAutomationVersion: (automationId: number, version: number) =>
     request<AutomationVersionTestResponse>(
       `/automations/${automationId}/versions/${version}/test`,
@@ -239,6 +288,10 @@ export const api = {
   },
 
   getExecution: (id: number) => request<Execution>(`/executions/${id}`),
+  createBatch: (input: CreateBatchInput) => request<ExecutionBatch>("/execution-batches", {method: "POST", body: JSON.stringify(input)}),
+  getBatch: (id: number) => request<ExecutionBatch>(`/execution-batches/${id}`),
+  listBatches: () => request<{items: ExecutionBatch[]; total: number}>("/execution-batches"),
+  cancelBatch: (id: number) => request<ExecutionBatch>(`/execution-batches/${id}/cancel`, {method: "POST"}),
 
   createExecution: (input: CreateExecutionInput) =>
     request<Execution>("/executions", {

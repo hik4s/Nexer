@@ -19,7 +19,8 @@ class WorkerApp:
     browser_manager: BrowserManager
 
 
-def build_worker(*, browser_manager: BrowserManager | None = None, worker_id=None, credential_client=None) -> WorkerApp:
+def build_worker(*, browser_manager: BrowserManager | None = None, worker_id=None, credential_client=None,
+                 stop_event=None) -> WorkerApp:
     worker_id = worker_id or os.getenv("NEXER_WORKER_ID") or f"worker-{os.getpid()}"
     concurrency = int(os.getenv("NEXER_WORKER_CONCURRENCY", "1"))
     downloads_root = Path(
@@ -48,8 +49,10 @@ def build_worker(*, browser_manager: BrowserManager | None = None, worker_id=Non
         page_factory=page_factory,
         downloads_root=downloads_root,
         credential_client=credential_client,
+        shutdown_requested=stop_event.is_set if stop_event is not None else None,
         corporate_page_factory=lambda system, authorize: manager.create_monitored_corporate_page(
             system, authorize=authorize),
+        login_page_factory=lambda configuration, authorize: manager.create_monitored_login_page(configuration, authorize=authorize),
     )
     loop = WorkerLoop(
         service=service,
@@ -60,12 +63,14 @@ def build_worker(*, browser_manager: BrowserManager | None = None, worker_id=Non
     return WorkerApp(loop=loop, browser_manager=manager)
 
 
-def main(*, worker_id=None, credential_client=None) -> int:
-    stop_event = Event()
+def main(*, worker_id=None, credential_client=None, stop_event=None) -> int:
+    stop_event = stop_event if stop_event is not None else Event()
     for signum in (signal.SIGINT, signal.SIGTERM):
         signal.signal(signum, lambda *_args: stop_event.set())
 
-    app = build_worker(worker_id=worker_id, credential_client=credential_client)
+    if stop_event.is_set():
+        return 0
+    app = build_worker(worker_id=worker_id, credential_client=credential_client, stop_event=stop_event)
     try:
         app.loop.run(stop_event=stop_event)
         return 0

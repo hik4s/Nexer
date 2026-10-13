@@ -222,7 +222,7 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
                 send_to_network=False,
                 keep_local_copy=True,
                 overwrite_existing=False,
-                test_mode=True,
+                test_mode=False,
                 inputs={"company": "001"},
                 cancel_requested=False,
             )
@@ -242,6 +242,18 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
             return execution.id
         finally:
             db.close()
+
+    def test_test_mode_does_not_open_browser_or_execute_real_actions(self):
+        execution_id = self._seed_execution()
+        with self.session_factory() as db:
+            db.get(Execution, execution_id).test_mode = True
+            db.commit()
+        worker = WorkerService(session_factory=self.session_factory, worker_id="dry-run", pid=999)
+        worker.register()
+        page_factory = Mock(return_value=FakePage())
+        processor = WorkerExecutionProcessor(session_factory=self.session_factory, worker_service=worker, page_factory=page_factory, downloads_root=Path(self.tmp.name) / "downloads")
+        self.assertEqual(processor.process_once().status, ExecutionStatus.SUCCEEDED.value)
+        page_factory.assert_not_called()
 
     def test_unvalidated_corporate_renewal_never_reaches_browser(self):
         execution_id = self._seed_execution()
@@ -349,6 +361,41 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
         finally:
             db.close()
 
+
+    def test_processor_marks_interrupted_item_cancelled_after_request(self):
+        execution_id = self._seed_execution()
+        worker = WorkerService(session_factory=self.session_factory,
+            worker_id="interrupted-worker", hostname="test-host", pid=1000)
+        worker.register()
+        runner = Mock()
+
+        def interrupted_run(_recipe, _context):
+            db = self.session_factory()
+            try:
+                db.get(Execution, execution_id).cancel_requested = True
+                db.commit()
+            finally:
+                db.close()
+            raise RuntimeError("synthetic browser interrupted")
+
+        runner.run.side_effect = interrupted_run
+        processor = WorkerExecutionProcessor(session_factory=self.session_factory,
+            worker_service=worker,
+            page_factory=lambda *_args: FakePage(),
+            downloads_root=Path(self.tmp.name) / "downloads", runner=runner)
+        result = processor.process_once()
+        self.assertEqual(result.status, "CANCELLED")
+        db = self.session_factory()
+        try:
+            item = db.scalar(select(ExecutionAutomation).where(
+                ExecutionAutomation.execution_id == execution_id))
+            self.assertEqual(item.status, "CANCELLED")
+            event_types = list(db.scalars(select(Event.type).where(
+                Event.execution_id == execution_id)))
+            self.assertIn("automation.cancelled", event_types)
+            self.assertNotIn("automation.failed", event_types)
+        finally:
+            db.close()
 
     def test_processor_marks_execution_cancelled_when_runtime_stops(self):
         execution_id = self._seed_execution()
@@ -526,6 +573,39 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
             db.commit()
         finally:
             db.close()
+
+    def test_worker_shutdown_revokes_corporate_execution_before_next_action(self):
+        from threading import Event as StopEvent
+        from unittest.mock import patch
+        execution_id = self._seed_execution()
+        self._set_corporate_system()
+        worker = WorkerService(session_factory=self.session_factory, worker_id="corp-shutdown",
+                               hostname="test", pid=1001)
+        worker.register()
+        page = CorporateTestPage()
+        client = CorporateTestClient()
+        stop = StopEvent()
+        original_goto = page.goto
+        def goto(url, **kwargs):
+            original_goto(url, **kwargs)
+            if url.endswith("#/report"):
+                stop.set()
+        page.goto = goto
+        def factory(system, authorize):
+            page.corporate_policy = CorporateTestPolicy(authorize)
+            return page
+        processor = WorkerExecutionProcessor(session_factory=self.session_factory,
+            worker_service=worker, page_factory=lambda *_args: self.fail("Unrestricted browser"),
+            corporate_page_factory=factory, credential_client=client,
+            downloads_root=Path(self.tmp.name) / "downloads")
+        processor.shutdown_requested = stop.is_set
+        with patch("nexer_worker.processor.require_validated_adapter"):
+            result = processor.process_once()
+        self.assertEqual(result.status, "FAILED")
+        self.assertTrue(page.closed)
+        self.assertNotIn(("fill", "#company", "001"), page.calls)
+        self.assertEqual(client.released, [execution_id])
+        worker.stop()
 
     def test_corporate_system_without_validated_adapter_never_creates_browser(self):
         execution_id = self._seed_execution()

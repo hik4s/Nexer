@@ -27,6 +27,21 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2] / "backend"
 
 
 class WorkerServiceTests(unittest.TestCase):
+    def test_queued_execution_bound_to_offline_worker_fails_without_reassignment(self):
+        execution_id = self._seed_queued_execution()
+        with self.session_factory() as db:
+            old = __import__("datetime").datetime(2020, 1, 1)
+            db.add(Worker(worker_id="lost-queued-worker", hostname="synthetic", pid=0, status="OFFLINE", concurrency_limit=1, current_load=0, heartbeat_at=old, started_at=old))
+            execution = db.get(Execution, execution_id)
+            execution.worker_id = "lost-queued-worker"
+            db.commit()
+        service = WorkerService(session_factory=self.session_factory, worker_id="healthy-recovery", concurrency_limit=1, hostname="local", pid=__import__("os").getpid())
+        service.register()
+        self.assertEqual(service.recover_stale_executions(), 1)
+        with self.session_factory() as db:
+            self.assertEqual(db.get(Execution, execution_id).status, "FAILED")
+            self.assertIsNone(db.get(Execution, execution_id).worker_id)
+        service.stop()
     _execution_seed = 0
 
     @classmethod
@@ -243,7 +258,9 @@ class WorkerServiceTests(unittest.TestCase):
         )
         recovery.register()
 
-        recovered = recovery.recover_stale_executions(stale_after_seconds=60)
+        # This fixture models a dead PID; do not depend on Windows reusing PID 10.
+        with __import__("unittest.mock", fromlist=["patch"]).patch.object(WorkerService, "_worker_process_is_alive", return_value=False):
+            recovered = recovery.recover_stale_executions(stale_after_seconds=60)
 
         self.assertEqual(recovered, 1)
 

@@ -36,6 +36,9 @@ Invoke-Checked python -m unittest discover -s apps\worker\tests -v
 $env:PYTHONPATH = "$root\apps\runtime"
 Invoke-Checked python -m unittest discover -s apps\runtime\tests -v
 
+$env:PYTHONPATH = "$root\apps\runtime;$root\apps\recorder"
+Invoke-Checked python -m unittest discover -s apps\recorder\tests -v
+
 Push-Location apps\frontend
 try {
     Invoke-Checked npm install --no-audit --no-fund

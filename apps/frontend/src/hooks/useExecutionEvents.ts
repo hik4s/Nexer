@@ -7,7 +7,11 @@ export function useExecutionEvents(executionId: number | null) {
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
+    setEvents([]);
+    setConnected(false);
     if (executionId == null) return;
+
+    let lastId = 0;
 
     const source = new EventSource(executionEventsUrl(executionId), { withCredentials: true });
 
@@ -34,11 +38,15 @@ export function useExecutionEvents(executionId: number | null) {
 
     const handlers = eventTypes.map((type) => {
       const handler = (event: MessageEvent<string>) => {
-        const payload = JSON.parse(event.data || "{}") as Record<string, unknown>;
+        const id = Number(event.lastEventId);
+        if (!Number.isSafeInteger(id) || id <= lastId) return;
+        let payload: Record<string, unknown>;
+        try {payload = JSON.parse(event.data || "{}");} catch {return;}
+        lastId = id;
         setEvents((current) => [
-          ...current,
+          ...current.slice(-499),
           {
-            id: Number(event.lastEventId),
+            id,
             type,
             level: type.endsWith("failed") ? "ERROR" : "INFO",
             message: type.replaceAll(".", " "),

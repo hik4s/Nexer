@@ -1,5 +1,22 @@
 # Nexer
 
+O Nexer está evoluindo para um aplicativo local de **automações web reutilizáveis**, voltado a tarefas pessoais e profissionais. O núcleo em desenvolvimento usa React, FastAPI, SQLite e Playwright com Edge.
+
+Os pilares do produto são **automações**, **cadastro de perfis de login**, **gravação de fluxos** e **execução de vários fluxos por lote**. Perfis guardam a configuração dos campos, com credenciais informadas somente ao executar. O núcleo inclui seleção de alvos no Edge, receitas versionadas, campos parametrizados, preparação/acompanhamento de lotes e dois workers isolados por padrão. A validação atual usa sites locais sintéticos; os gates SGIND/IQOS continuam fechados.
+
+A interface usa a identidade Percurso do `nexer-logo-kit`: grafite, branco e fundo suave, logo original, navegação lateral, busca de fluxos e cartões selecionáveis. Consulte [a integração visual](docs/development/VISUAL_IDENTITY.md).
+
+O workspace simplificado reúne **Meus fluxos**, **Acessos** e **Execuções**. Inclui cadastro guiado, grupos de acesso com destinos distintos, rotinas favoritas, campos compartilhados com ajustes individuais, períodos rápidos, resumo antes de iniciar e repetição com parâmetros revisados. Gravação direta pela interface está disponível para páginas HTTP locais; outras receitas podem ser importadas. Aplicar migrações até0007 antes de usar a instalação real.
+
+- [Direção e desenho atual](docs/superpowers/specs/2026-10-12-nexer-reusable-flows-design.md)
+- [Roadmap atualizado](docs/development/ROADMAP.md)
+- [Gravar, importar e reutilizar receitas](apps/recorder/README.md)
+- [Continuidade do desenvolvimento](CONTINUAR_NEXER_2026-10-13.md)
+
+## Versão legada
+
+A documentação abaixo descreve a versão anterior em Streamlit, especializada em SGIND/IQOS. Suas instruções de credenciais e instalação não representam o novo núcleo; esse legado permanece preservado durante a migração.
+
 Automação de relatórios do **SGIND** e **IQOS**, com painel em Streamlit, controle de execução, acompanhamento de status, download dos arquivos e tratamento automático do ambiente Python.
 
 A versão final foi preparada para uso no Windows por meio do executável `Nexer.exe`. Na primeira abertura, o launcher configura automaticamente o ambiente necessário para executar o projeto.

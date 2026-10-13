@@ -1,6 +1,7 @@
 """Process-local credentials. No persistence, logging or secret-bearing repr."""
 
 from copy import deepcopy
+import re
 from math import isfinite
 from threading import RLock
 from time import monotonic
@@ -25,7 +26,8 @@ class EphemeralCredentialVault:
             or type(ttl_seconds) not in (int, float)
             or not isfinite(ttl_seconds) or not 0 < ttl_seconds <= 3600
             or not isinstance(systems, dict) or not systems
-            or not set(systems).issubset({"SGIND", "IQOS"})
+            or len(systems) > 20
+            or any(not isinstance(key, str) or (key not in {"SGIND", "IQOS"} and not re.fullmatch(r"profile-[1-9][0-9]*-v[1-9][0-9]*", key)) for key in systems)
         ):
             raise ValueError("INVALID_CREDENTIAL_PAYLOAD")
         for values in systems.values():

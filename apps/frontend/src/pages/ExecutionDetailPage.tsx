@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 
 import { useExecutionEvents } from "../hooks/useExecutionEvents";
 import { api } from "../lib/api";
@@ -69,6 +69,7 @@ export function ExecutionDetailPage() {
       <div className="page-heading">
         <p className="eyebrow">Acompanhamento</p>
         <h1>{current.name}</h1>
+        <Link className="secondary-button" to={`/batches/new?repeatExecution=${current.id}`}>Executar novamente</Link>
         <p className="muted">
           Execução #{current.id} · {labels[current.status] ?? current.status}
         </p>

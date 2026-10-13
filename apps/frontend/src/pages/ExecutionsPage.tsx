@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import {useState} from "react";
 
 import { api } from "../lib/api";
 
@@ -13,6 +14,8 @@ const labels: Record<string, string> = {
 };
 
 export function ExecutionsPage() {
+  const [view, setView] = useState<"flows" | "batches">("flows");
+  const batches = useQuery({queryKey: ["execution-batches"], queryFn: api.listBatches, enabled: view === "batches", retry: false, refetchInterval: view === "batches" ? 3000 : false});
   const executions = useQuery({
     queryKey: ["executions", { limit: 50 }],
     queryFn: () => api.listExecutions({ limit: 50, offset: 0 }),
@@ -31,6 +34,9 @@ export function ExecutionsPage() {
       </div>
 
       <section className="card">
+        <div className="button-row"><button className={view === "flows" ? "primary-button" : "secondary-button"} onClick={() => setView("flows")}>Execuções individuais</button><button className={view === "batches" ? "primary-button" : "secondary-button"} onClick={() => setView("batches")}>Lotes</button></div>
+        {view === "batches" ? <div className="automation-list">{batches.isLoading ? <p>Carregando lotes…</p> : batches.isError ? <p role="alert">Não foi possível carregar os lotes.</p> : batches.data?.items.length ? batches.data.items.map(batch => <Link className="automation-row" to={`/batches/${batch.id}`} key={batch.id}><div><strong>{batch.name}</strong><p className="muted">{batch.executions.length} fluxos</p></div><span className="badge">{labels[batch.status] ?? batch.status}</span></Link>) : <p className="muted">Nenhum lote registrado.</p>}</div> : null}
+        {view === "flows" ? <>
         {executions.isLoading ? (
           <p className="muted">Carregando execuções…</p>
         ) : executions.isError ? (
@@ -67,7 +73,7 @@ export function ExecutionsPage() {
             ))}
           </div>
         )}
-      </section>
+        </> : null}</section>
     </main>
   );
 }

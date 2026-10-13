@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Callable
 
 from sqlalchemy import select
+from login_profiles import profile_key, authenticate_profile, LoginExecutionGuard
 
 from app.enums import ExecutionAutomationStatus, ExecutionStage, ExecutionStatus
 from app.models import Automation, AutomationVersion, Checkpoint, Event, Execution, ExecutionAutomation
@@ -39,6 +40,8 @@ class WorkerExecutionProcessor:
         session_state_store=None,
         credential_client=None,
         corporate_page_factory=None,
+        login_page_factory=None,
+        shutdown_requested=None,
     ):
         if page_factory is None:
             raise ValueError("page_factory is required")
@@ -52,6 +55,8 @@ class WorkerExecutionProcessor:
         self.session_state_store = None  # Corporate sessions must never persist.
         self.credential_client = credential_client
         self.corporate_page_factory = corporate_page_factory
+        self.login_page_factory = login_page_factory
+        self.shutdown_requested = shutdown_requested or (lambda: False)
 
     def process_once(self) -> ProcessResult:
         execution_id = self.worker_service.claim_next()
@@ -100,7 +105,20 @@ class WorkerExecutionProcessor:
 
     def _run_item(self, execution: Execution, item: ExecutionAutomation) -> None:
         try:
+            if self.shutdown_requested():
+                raise RuntimeError("WORKER_SHUTDOWN")
             recipe = self._load_recipe(item.automation_id, item.automation_version)
+            profile_configuration = None
+            profile_identity = None
+            if recipe.get("login_profile"):
+                reference = recipe["login_profile"]
+                profile_identity = profile_key(reference["id"], reference["version"])
+                profile_configuration = (execution.login_profiles or {}).get(profile_identity)
+                if not profile_configuration or recipe.get("authentication") or any(declaration.get("secret") for declaration in recipe.get("variables", {}).values()):
+                    raise RuntimeError("LOGIN_PROFILE_INVALID")
+                if not execution.test_mode:
+                    self._authorize_corporate(execution.id, profile_identity)
+                    if self.login_page_factory is None: raise RuntimeError("LOGIN_CONTEXT_UNAVAILABLE")
             corporate_system = self._corporate_system(item.automation_id)
             if corporate_system is not None:
                 require_validated_adapter(corporate_system)
@@ -140,7 +158,17 @@ class WorkerExecutionProcessor:
 
         page = None
         try:
-            if corporate_system is not None:
+            if execution.test_mode:
+                auth_guard = None
+            elif profile_configuration is not None:
+                page = self.login_page_factory(profile_configuration, lambda: self._authorize_corporate(execution.id, profile_identity))
+                values = self.credential_client.resolve(execution.id, profile_identity)
+                try:
+                    authenticate_profile(page, profile_configuration, values, cancellation_requested=lambda: self._execution_cancel_requested(execution.id))
+                finally:
+                    values.clear()
+                auth_guard = LoginExecutionGuard(profile_configuration)
+            elif corporate_system is not None:
                 page = self.corporate_page_factory(
                     corporate_system, lambda: self._authorize_corporate(execution.id, corporate_system))
                 authenticate_corporate(
@@ -161,7 +189,7 @@ class WorkerExecutionProcessor:
                 page=page,
                 variables=variables,
                 downloads_dir=downloads_dir,
-                dry_run=False,
+                dry_run=execution.test_mode,
                 emit=lambda event: self._emit_runtime_event(
                     execution.id,
                     item.id,
@@ -174,7 +202,9 @@ class WorkerExecutionProcessor:
                 auth_guard=auth_guard,
             )
             result = self.runner.run(recipe, context)
-            if corporate_system is not None and not result.cancelled and result.failed_step_id is None:
+            if self.shutdown_requested():
+                raise RuntimeError("WORKER_SHUTDOWN")
+            if not execution.test_mode and (corporate_system is not None or profile_configuration is not None) and not result.cancelled and result.failed_step_id is None:
                 auth_guard.ensure_authenticated(page)
             now = self._now()
 
@@ -243,7 +273,7 @@ class WorkerExecutionProcessor:
     def _authorize_corporate(self, execution_id, system):
         values = None
         try:
-            if self._execution_cancel_requested(execution_id):
+            if self.shutdown_requested() or self._execution_cancel_requested(execution_id):
                 raise RuntimeError()
             if self.credential_client is None:
                 raise RuntimeError()
@@ -300,6 +330,9 @@ class WorkerExecutionProcessor:
         error_type: str,
         error_detail: str | None,
     ) -> None:
+        if self._execution_cancel_requested(execution_id):
+            self._cancel_item(execution_id, item_id)
+            return
         now = self._now()
         detail = "AUTOMATION_FAILED"  # Raw runtime/browser exceptions may contain credentials.
         self._update_item(

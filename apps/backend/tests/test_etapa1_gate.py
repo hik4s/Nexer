@@ -134,7 +134,7 @@ class Etapa1GateTests(unittest.TestCase):
             json={
                 "name": "Etapa 1 Gate Execution",
                 "automation_ids": [automation_id],
-                "test_mode": True,
+                "test_mode": False,
                 "inputs": {
                     "base_url": "https://example.test/gate",
                     "company": "001",

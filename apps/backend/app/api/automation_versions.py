@@ -1,14 +1,22 @@
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response, Request
+from pydantic import BaseModel, Field
+from app.services.report_options import ReportOptionsError, read_options
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from recipe import RecipeValidationError, validate_recipe
 from app.enums import AutomationStatus
 from app.errors import ApiError
 from app.models import Automation, AutomationVersion
+from app.services.profile_execution import profile_configuration
+from app.schemas_execution import CorporateCredential
+from app.security import SESSION_COOKIE_NAME, resolve_session
+from browser_manager import BrowserManager
+from login_profiles import authenticate_profile
 from app.repositories.automation_version import get_by_id, list_versions, next_version
 from app.schemas_version import (
     AutomationVersionCreate,
@@ -25,23 +33,64 @@ router = APIRouter(
 )
 
 
+class ReportOptionsRequest(BaseModel):
+    inputs: dict[str, Any] = Field(default_factory=dict)
+    profile_credentials: dict[str, CorporateCredential] = Field(default_factory=dict, repr=False, max_length=20)
+
+
+@router.post("/{version}/input-options")
+def get_input_options(automation_id: int, version: int, payload: ReportOptionsRequest, response: Response, request: Request, db: Session = Depends(get_db)):
+    automation = db.get(Automation, automation_id)
+    if automation is None:
+        raise ApiError(404, "AUTOMATION_NOT_FOUND", "Automation not found")
+    item = get_by_id(db, automation_id, version)
+    if item is None:
+        raise ApiError(404, "AUTOMATION_VERSION_NOT_FOUND", "Automation version not found")
+    if automation.status != "PUBLISHED" or automation.current_version != version:
+        raise ApiError(409, "REPORT_NOT_PUBLISHED", "Publique o relatório antes de preparar os filtros.")
+    if automation.system in {"SGIND", "IQOS"}:
+        raise ApiError(409, "CORPORATE_AUTH_NOT_VALIDATED", "Carregamento corporativo aguarda validação no ambiente autorizado.")
+    _validate_recipe_contract(item.recipe)
+    page_factory = None
+    values = {}
+    if item.recipe.get("login_profile"):
+        identity, configuration = profile_configuration(db, item.recipe["login_profile"])
+        if set(payload.profile_credentials) != {identity}:
+            raise ApiError(422, "PROFILE_CREDENTIALS_REQUIRED", "Informe as credenciais para consultar as opções deste site.")
+        credential = payload.profile_credentials[identity]
+        values = {"username": credential.username.get_secret_value(), "password": credential.password.get_secret_value()}
+        owner = request.cookies.get(SESSION_COOKIE_NAME)
+        def authorize():
+            if resolve_session(owner) is None: raise RuntimeError("CREDENTIALS_UNAVAILABLE")
+        def page_factory():
+            page = BrowserManager(headless=True).create_monitored_login_page(configuration, authorize=authorize, accept_downloads=False)
+            try:
+                authenticate_profile(page, configuration, values, cancellation_requested=lambda: resolve_session(owner) is None)
+                page.corporate_policy.allowed_methods = {"GET", "HEAD"}
+                return page
+            except Exception:
+                page.close(); raise ReportOptionsError("OPTIONS_PAGE_UNAVAILABLE") from None
+    elif payload.profile_credentials:
+        raise ApiError(422, "PROFILE_CREDENTIALS_MISMATCH", "Este fluxo não usa o perfil informado.")
+    try:
+        result = read_options(item.recipe, payload.inputs, page_factory=page_factory) if page_factory else read_options(item.recipe, payload.inputs)
+    except ReportOptionsError as exc:
+        raise ApiError(422, str(exc), "Não foi possível carregar as opções. Confira o endereço e os filtros da página local.") from None
+    finally:
+        values.clear()
+    response.headers["Cache-Control"] = "no-store"
+    return result
+
+
 def _now() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 def _validate_recipe_contract(recipe: dict[str, Any]) -> None:
-    if recipe.get("schema_version") != 1:
-        raise ApiError(422, "INVALID_RECIPE", "Recipe schema_version must be 1")
-    if not isinstance(recipe.get("name"), str) or not recipe["name"].strip():
-        raise ApiError(422, "INVALID_RECIPE", "Recipe name is required")
-    if not isinstance(recipe.get("variables", {}), dict):
-        raise ApiError(422, "INVALID_RECIPE", "Recipe variables must be an object")
-    if not isinstance(recipe.get("steps"), list) or not recipe["steps"]:
-        raise ApiError(422, "INVALID_RECIPE", "Recipe steps are required")
-    if not isinstance(recipe.get("output"), dict):
-        raise ApiError(422, "INVALID_RECIPE", "Recipe output is required")
-    if recipe["output"].get("type") != "file":
-        raise ApiError(422, "INVALID_RECIPE", "Recipe output type must be file")
+    try:
+        validate_recipe(recipe)
+    except RecipeValidationError:
+        raise ApiError(422, "INVALID_RECIPE", "Receita incompatível com o runtime.") from None
 
 
 def _to_read(automation: Automation, version: AutomationVersion) -> AutomationVersionRead:
@@ -169,6 +218,9 @@ def publish_version(automation_id: int, version: int, db: Session = Depends(get_
             "Automation version must pass its test before publishing",
         )
 
+    _validate_recipe_contract(item.recipe)
+    if item.recipe.get("login_profile"):
+        profile_configuration(db, item.recipe["login_profile"])
     automation.current_version = item.version
     automation.status = AutomationStatus.PUBLISHED.value
     item.published_at = item.published_at or _now()

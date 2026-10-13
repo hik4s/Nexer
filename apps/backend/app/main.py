@@ -8,6 +8,9 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.auth import router as auth_router
+from app.api.login_profiles import router as login_profiles_router
+from app.api.workspace import router as workspace_router
+from app.api.execution_batches import router as execution_batches_router
 from app.api.automations import router as automations_router
 from app.api.events import router as events_router
 from app.api.diagnostics import router as diagnostics_router
@@ -27,6 +30,8 @@ settings = get_settings()
 import asyncio
 from contextlib import asynccontextmanager
 from app.security import sweep_sessions
+from app.services.login_recordings import login_recordings
+from app.services.flow_recordings import flow_recordings
 
 
 @asynccontextmanager
@@ -35,11 +40,15 @@ async def lifespan(application):
         while True:
             sweep_sessions()
             worker_channel.sweep()
+            login_recordings.sweep()
+            flow_recordings.sweep()
             await asyncio.sleep(5)
     task = asyncio.create_task(cleanup())
     try:
         yield
     finally:
+        await asyncio.to_thread(login_recordings.close_all)
+        await asyncio.to_thread(flow_recordings.close_all)
         task.cancel()
         try:
             await task
@@ -162,6 +171,9 @@ async def unhandled_exception_handler(
 
 
 app.include_router(auth_router)
+app.include_router(login_profiles_router)
+app.include_router(workspace_router)
+app.include_router(execution_batches_router)
 app.include_router(worker_credentials_router)
 app.include_router(automations_router)
 app.include_router(executions_router)

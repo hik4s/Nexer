@@ -5,6 +5,13 @@ from recipe import RecipeValidationError, validate_recipe
 
 
 class RecipeValidationTests(unittest.TestCase):
+    def test_variable_declarations_must_be_objects_instead_of_recorded_values(self):
+        recipe = {"schema_version": 1, "name": "Inputs", "variables": {"period_start": "2031-02-17"},
+            "steps": [{"id": "open", "action": "navigate", "url": "https://example.test"}],
+            "output": {"type": "file"}}
+        with self.assertRaisesRegex(RecipeValidationError, "VARIABLE_DECLARATION_INVALID"):
+            validate_recipe(recipe)
+
     def test_valid_recipe_is_normalized(self):
         recipe = {
             "schema_version": 1,

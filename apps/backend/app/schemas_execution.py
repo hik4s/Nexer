@@ -22,6 +22,7 @@ class ExecutionCreate(BaseModel):
     test_mode: bool = False
     inputs: dict = Field(default_factory=dict)
     corporate_credentials: dict[Literal["SGIND", "IQOS"], CorporateCredential] = Field(default_factory=dict, repr=False)
+    profile_credentials: dict[str, CorporateCredential] = Field(default_factory=dict, repr=False, max_length=20)
 
     @field_validator("automation_ids")
     @classmethod

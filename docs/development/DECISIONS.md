@@ -27,3 +27,7 @@ O estado do projeto deve existir no repositório. A conversa é interface de tra
 
 ### 7. Segurança
 Credenciais, cookies, tokens, caminhos corporativos e dados reais não entram no código, fixtures, logs ou documentação pública.
+
+
+### 8. Direção do produto — 2026-10-12
+O usuário solicitou Nexer focado em automações, cadastro de perfis de login e gravação de fluxos reutilizáveis, atendendo uso pessoal e profissional. Confirmou iniciar vários fluxos por lote com acompanhamento/cancelamento individual. Perfis armazenam configuração dos campos; credenciais são informadas na execução e permanecem efêmeras. A implementação deve preservar especializações e gates de SGIND/IQOS. Paralelismo por processos isolados é a proposta técnica; não declarar pronto o loop serial atual. Desenho e critérios estão em docs/superpowers/specs/2026-10-12-nexer-reusable-flows-design.md.

@@ -8,6 +8,7 @@ import { App } from "./App";
 
 vi.mock("./lib/api", () => ({
   api: {
+    listRoutines: vi.fn(async () => ({items: []})),
     getAuthSession: vi.fn().mockResolvedValue({ authenticated: true, username: "operador" }),
     login: vi.fn(),
     logout: vi.fn(),
@@ -32,12 +33,10 @@ describe("Nexer navigation", () => {
 
   it("shows the main sections", async () => {
     renderRoute("/");
-    expect(await screen.findByRole("link", { name: "Dashboard" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Automações" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Meus fluxos" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Acessos" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Execuções" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Nova execução" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Diagnóstico" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Destinos" })).toBeInTheDocument();
+    expect(screen.getByText("Ferramentas e ajustes")).toBeInTheDocument();
   });
 
   it("renders the executions route", async () => {

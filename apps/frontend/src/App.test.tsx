@@ -9,7 +9,9 @@ import { api } from "./lib/api";
 
 vi.mock("./lib/api", () => ({
   api: {
+    listRoutines: vi.fn(async () => ({items: []})),
     getHealth: vi.fn(),
+    listAutomations: vi.fn(),
     getAuthSession: vi.fn(),
     login: vi.fn(),
     logout: vi.fn(),
@@ -28,6 +30,7 @@ function renderApp() {
 describe("Nexer authentication and dashboard", () => {
   beforeEach(() => {
     window.sessionStorage.clear();
+    vi.mocked(api.listAutomations).mockResolvedValue({items: [], total: 0, limit: 50, offset: 0});
     vi.mocked(api.getAuthSession).mockResolvedValue({ authenticated: false, username: null });
     vi.mocked(api.login).mockResolvedValue({ authenticated: true, username: "operador" });
     vi.mocked(api.logout).mockResolvedValue({ authenticated: false, username: null });
@@ -47,7 +50,7 @@ describe("Nexer authentication and dashboard", () => {
       await user.type(screen.getByLabelText("Código de pareamento"), "synthetic-pairing-code");
       await user.click(screen.getByRole("button", { name: "Entrar" }));
     });
-    expect(await screen.findByText("Nexer Dashboard")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", {name: "Meus fluxos"})).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("Ambiente saudável")).toBeInTheDocument());
     expect(screen.getByText("API operacional")).toBeInTheDocument();
   });
@@ -57,11 +60,11 @@ describe("Nexer authentication and dashboard", () => {
     vi.mocked(api.getHealth).mockResolvedValue({ status: "ok" });
     vi.mocked(api.logout).mockRejectedValue(new Error("API unavailable"));
     renderApp();
-    expect(await screen.findByText("Nexer Dashboard")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", {name: "Meus fluxos"})).toBeInTheDocument();
     const { default: userEvent } = await import("@testing-library/user-event");
     await userEvent.setup().click(screen.getByRole("button", { name: "Sair" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Não foi possível encerrar a sessão no backend");
-    expect(screen.getByText("Nexer Dashboard")).toBeInTheDocument();
+    expect(screen.getByRole("heading", {name: "Meus fluxos"})).toBeInTheDocument();
   });
 
   it("shows an error state when the API is unavailable", async () => {

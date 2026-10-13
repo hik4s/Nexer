@@ -1,5 +1,6 @@
 import re
 from copy import deepcopy
+from field_schema import validate_field
 
 
 KNOWN_ACTIONS = {
@@ -13,6 +14,7 @@ KNOWN_ACTIONS = {
     "switch_tab",
     "download",
     "validate_file",
+    "check", "set_value", "choose", "choose_radio", "scroll", "hover", "drag", "close_tab",
 }
 
 _VARIABLE_PATTERN = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
@@ -27,6 +29,10 @@ def validate_recipe(recipe: dict) -> dict:
         raise RecipeValidationError("RECIPE_OBJECT_REQUIRED")
 
     normalized = deepcopy(recipe)
+    profile = normalized.get("login_profile")
+    if profile is not None and (not isinstance(profile, dict) or set(profile) != {"id", "version"}
+        or any(type(value) is not int or value < 1 for value in profile.values())):
+        raise RecipeValidationError("LOGIN_PROFILE_REFERENCE_INVALID")
 
     if normalized.get("schema_version") != 1:
         raise RecipeValidationError("UNSUPPORTED_SCHEMA_VERSION")
@@ -38,6 +44,18 @@ def validate_recipe(recipe: dict) -> dict:
     variables = normalized.get("variables", {})
     if not isinstance(variables, dict):
         raise RecipeValidationError("VARIABLES_OBJECT_REQUIRED")
+    if any(not isinstance(declaration, dict) for declaration in variables.values()):
+        raise RecipeValidationError("VARIABLE_DECLARATION_INVALID")
+    if profile is not None and ("authentication" in normalized or any(declaration.get("secret") for declaration in variables.values())):
+        raise RecipeValidationError("LOGIN_PROFILE_CONTRACT_CONFLICT")
+    for declaration in variables.values():
+        if "label" in declaration and (not isinstance(declaration["label"], str) or len(declaration["label"]) > 100):
+            raise RecipeValidationError("VARIABLE_LABEL_INVALID")
+        if "field" in declaration:
+            try:
+                validate_field(declaration["field"])
+            except ValueError:
+                raise RecipeValidationError("FIELD_SCHEMA_INVALID") from None
 
     steps = normalized.get("steps")
     if not isinstance(steps, list) or not steps:
@@ -151,6 +169,21 @@ def _validate_retry(step: dict) -> None:
 
 
 def _validate_step_requirements(action: str, step: dict) -> None:
+    frames = step.get("frames", [])
+    if not isinstance(frames, list) or len(frames) > 16 or any(not isinstance(item, str) or not item.strip() for item in frames):
+        raise RecipeValidationError("FRAME_SELECTORS_INVALID")
+    if action == "click":
+        if step.get("button", "left") not in {"left", "right", "middle"} or type(step.get("click_count", 1)) is not int or not 1 <= step.get("click_count", 1) <= 3:
+            raise RecipeValidationError("CLICK_OPTIONS_INVALID")
+    if action == "scroll":
+        if any(type(step.get(key)) is not int or not 0 <= step[key] <= 10000000 for key in ("x", "y")):
+            raise RecipeValidationError("SCROLL_POSITION_INVALID")
+    if action == "drag" and (not isinstance(step.get("target_selector"), str) or not step["target_selector"].strip()):
+        raise RecipeValidationError("DRAG_TARGET_REQUIRED")
+    if action == "set_value" and step.get("input_type") not in {"range", "color"}:
+        raise RecipeValidationError("INPUT_TYPE_INVALID")
+    if action == "choose_radio" and (type(step.get("group_index", 0)) is not int or not 0 <= step.get("group_index", 0) <= 1000):
+        raise RecipeValidationError("RADIO_GROUP_INVALID")
     if action == "navigate":
         url = step.get("url")
         if not isinstance(url, str) or not url.strip():
@@ -159,12 +192,12 @@ def _validate_step_requirements(action: str, step: dict) -> None:
             if not _VARIABLE_PATTERN.fullmatch(url.strip()):
                 raise RecipeValidationError("UNSAFE_URL")
 
-    if action in {"click", "fill", "select", "press", "wait_for", "download"}:
+    if action in {"click", "fill", "select", "press", "wait_for", "download", "check", "set_value", "choose", "choose_radio", "scroll", "hover", "drag"}:
         selector = step.get("selector")
         if not isinstance(selector, str) or not selector.strip():
             raise RecipeValidationError("SELECTOR_REQUIRED")
 
-    if action in {"fill", "select"} and "value" not in step:
+    if action in {"fill", "select", "check", "set_value", "choose", "choose_radio"} and "value" not in step:
         raise RecipeValidationError("VALUE_REQUIRED")
 
     if action == "wait_for_any":
@@ -182,6 +215,13 @@ def _validate_step_requirements(action: str, step: dict) -> None:
             raise RecipeValidationError("TAB_INDEX_REQUIRED")
 
     if action == "download":
+        if "preserve_filename" in step and type(step["preserve_filename"]) is not bool:
+            raise RecipeValidationError("DOWNLOAD_FILENAME_INVALID")
+        if "collection" in step:
+            collection = step["collection"]
+            if (not isinstance(collection, dict) or set(collection) != {"rows", "name", "button", "pattern"}
+                    or any(not isinstance(value, str) or not value.strip() or len(value) > 2048 for value in collection.values())):
+                raise RecipeValidationError("DOWNLOAD_COLLECTION_INVALID")
         filename = step.get("filename")
         if not isinstance(filename, str) or not filename.strip():
             raise RecipeValidationError("DOWNLOAD_FILENAME_REQUIRED")

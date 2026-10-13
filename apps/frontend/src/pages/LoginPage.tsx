@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth";
+import { Brand } from "../components/Brand";
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -31,14 +32,14 @@ export function LoginPage() {
   return (
     <main className="login-shell">
       <section className="login-card">
-        <div className="brand login-brand"><div className="brand-mark" aria-hidden="true">N</div><div><strong>Nexer</strong><span>Automation Workspace</span></div></div>
+        <Brand className="login-brand" />
         <div className="login-heading"><p className="eyebrow">Pareamento local</p><h1>Entrar no Nexer</h1><p className="muted">Use o código exibido no console local ao iniciar o Nexer. Ele vale por cinco minutos e só pode ser usado uma vez.</p></div>
         <form className="login-form" onSubmit={submit}>
           <label>Código de pareamento<input type="password" autoComplete="off" value={pairingCode} onChange={(e) => setPairingCode(e.target.value)} placeholder="Cole o código do console local" autoFocus required maxLength={128} /></label>
           {error ? <p className="form-error" role="alert">{error}</p> : null}
           <button type="submit" className="primary-button login-button" disabled={submitting}>{submitting ? "Pareando..." : "Entrar"}</button>
         </form>
-        <p className="login-note">As credenciais SGIND/IQOS serão solicitadas separadamente para cada execução.</p>
+        <p className="login-note">Seus logins de sites serão solicitados separadamente para cada execução.</p>
       </section>
     </main>
   );

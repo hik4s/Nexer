@@ -45,6 +45,14 @@ class FakeEventSource {
 }
 
 describe("useExecutionEvents", () => {
+  it("deduplicates replayed events and clears the previous execution", () => {
+    const {result, rerender} = renderHook(({id}) => useExecutionEvents(id), {initialProps: {id: 7 as number | null}});
+    act(() => {FakeEventSource.instances[0].emit("action.finished", {}, "12"); FakeEventSource.instances[0].emit("action.finished", {}, "12");});
+    expect(result.current.events).toHaveLength(1);
+    rerender({id: null});
+    expect(result.current.events).toHaveLength(0);
+    expect(FakeEventSource.instances[0].closed).toBe(true);
+  });
   beforeEach(() => {
     FakeEventSource.instances = [];
     vi.stubGlobal("EventSource", FakeEventSource);

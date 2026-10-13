@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<title>Nexer — teste local do gravador</title>
+<style>body{font:18px system-ui;max-width:720px;margin:48px auto;background:#f3f5fa;color:#182436}label{display:block;margin:24px 0}input,select,button{font:inherit;padding:10px;margin-left:12px}button{margin-left:0}</style>
+<h1>Teste local do gravador</h1>
+<p>Preencha valores fictícios e clique em Gerar relatório. A receita guardará os locais e os nomes dos inputs, sem os valores usados aqui.</p>
+<label>Data inicial <input id="period_start" type="date"></label>
+<label>Data final <input id="period_end" type="date"></label>
+<label>Empresa <input id="company" type="text"></label>
+<label>Regional <select id="regional"><option value="">Selecione</option><option value="north">Norte</option><option value="south">Sul</option></select></label>
+<label>Observações <textarea id="notes"></textarea></label>
+<label><input id="enabled" type="checkbox"> Incluir detalhes</label>
+<fieldset id="group"><legend>Formato</legend><label><input type="radio" name="format" value="compact"> Compacto</label><label><input type="radio" name="format" value="detailed"> Detalhado</label></fieldset>
+<label>Quantidade <input id="amount" type="range" min="0" max="10"></label>
+<label>Cor <input id="color" type="color"></label>
+<label>Opções <select id="choices" multiple><option value="one">Uma</option><option value="two">Duas</option></select></label>
+<div id="editor" contenteditable="true" role="textbox" aria-label="Texto editável"></div>
+<div id="custom" role="listbox"><div role="option" onclick="this.parentElement.dataset.selection='north'">Norte fictício</div><div role="option" onclick="this.parentElement.dataset.selection='south'">Sul fictício</div></div>
+<div id="arbitrary" onclick="this.dataset.clicked='yes'">Clique demonstrativo fora de um botão</div>
+<iframe title="Formulário interno" src="frame.html"></iframe>
+<button id="popup" onclick="window.open('popup.html', '_blank')">Abrir formulário em nova aba</button>
+<a id="download" href="sample.csv" download="dados-ficticios.csv">Baixar exemplo fictício</a>
+<button id="generate" onclick="document.getElementById('status').hidden=false">Gerar relatório</button>
+<p id="status" hidden>Ação demonstrativa concluída. Nenhum arquivo corporativo foi gerado.</p>
+</html>

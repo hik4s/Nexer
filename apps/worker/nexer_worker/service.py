@@ -114,6 +114,7 @@ class WorkerService:
                 .where(
                     Execution.status == ExecutionStatus.QUEUED.value,
                     Execution.cancel_requested.is_(False),
+                    (Execution.worker_id.is_(None) | (Execution.worker_id == self.worker_id)),
                 )
                 .order_by(Execution.created_at, Execution.id)
                 .limit(1)
@@ -158,6 +159,16 @@ class WorkerService:
             current_worker = self._get_worker(db)
             now = utcnow()
             cutoff = now.timestamp() - stale_after_seconds
+
+            # Credential-bearing queued executions belong to one process only.
+            # A lost process requires a new execution with fresh credentials.
+            pinned = db.scalars(select(Execution).where(Execution.status == ExecutionStatus.QUEUED.value, Execution.worker_id.is_not(None))).all()
+            for execution in pinned:
+                assigned = db.scalar(select(Worker).where(Worker.worker_id == execution.worker_id))
+                lost = assigned is None or assigned.status == WorkerStatus.OFFLINE.value or (assigned.pid is not None and not self._worker_process_is_alive(assigned.pid))
+                if lost:
+                    self._mark_execution_lost(db, execution=execution, now=now, previous_worker_id=execution.worker_id)
+                    recovered += 1
 
             running = list(
                 db.scalars(

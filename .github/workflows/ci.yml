@@ -60,6 +60,14 @@ jobs:
           PYTHONPATH: apps/runtime
         run: python -m unittest discover -s apps/runtime/tests -v
 
+      - name: Recorder tests
+        # Recorder browser tests remain opt-in for synthetic local fixtures.
+        # Default tests check the parameterized compiler contract.
+        shell: pwsh
+        env:
+          PYTHONPATH: apps/runtime;apps/recorder
+        run: python -m unittest discover -s apps/recorder/tests -v
+
       - name: Syntax check
         shell: pwsh
         run: |

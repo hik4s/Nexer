@@ -1,33 +1,23 @@
-# Nexer — Roadmap de Implementação
+# Nexer — roadmap alinhado em 2026-10-13
 
-## Etapa 1
+Direção solicitada pelo usuário: aplicativo local para automações pessoais e profissionais, com perfis de login, gravação reutilizável e execução por lote. SGIND/IQOS são especializações mantidas. O Master Plan anterior continua como histórico; esta mudança não declara etapas anteriores encerradas.
 
-| Bloco | Estado | Observação |
+| Entrega | Estado real | Critério de conclusão |
 |---|---|---|
-| 1 Governança | Em andamento | baseline criado; PR de governança existente |
-| 2 Documentação funcional | Em andamento | Master Plan aprovado; documentação operacional em consolidação |
-| 3 Preparação ambiente | Em andamento | CI Windows funcional |
-| 4 Estrutura repositório | Parcial | `apps/` criado; recorder ainda inicial |
-| 5 Design System | Pendente | começa após base frontend |
-| 6 Frontend base | Pendente | React/Vite ainda não implementado |
-| 7 Backend base | Parcial/avançado | FastAPI + configuração + erros + health/version/metrics |
-| 8 Banco/persistência | Parcial/avançado | SQLAlchemy + Alembic + schema inicial + registry do Worker |
-| 9 API inicial | Parcial/avançado | automations, executions, cancelamento e SSE |
-| 10 Eventos tempo real | Parcial/avançado | persistência + SSE + Last-Event-ID |
-| 11 Worker inicial | Em implementação | lifecycle + claim atômico já testados |
-| 12 Runtime mínimo | Próximo | receita v1 + ações universais |
-| 13 Autenticação/navegador | Pendente | Browser Manager + Edge |
-| 14 Automação piloto | Pendente | será feita depois do Runtime |
-| 15 Testes/gate | Contínuo | não fechar Etapa 1 antes dos critérios de aceite |
+| Núcleo React/FastAPI/SQLite/SSE/worker/runtime | Implementado, em validação | Jornada integrada e gates formais |
+| Gravador parametrizado e campos no dashboard | Implementado localmente | Fixtures Edge; adaptação dos sites reais pendente |
+| Studio: importação e nomes de campos | Implementado, testes/revisão OK | Integração em build local |
+| Cadastrar login: perfis e seleção de campos no Edge | Implementado e validado em fixtures | Configuração sem credenciais, processo privado e cancelamento |
+| Login genérico efêmero por perfil | Implementado e validado localmente | LoginPOST/cookie/regra explícita; sites reais pendentes |
+| Selecionar fluxos e iniciar lote | Implementado; API/UI e testes | Parâmetros separados, transação/idempotência e status individual |
+| Paralelismo real por processos | Comprovado em dois processos/Edge locais | Downloads sobrepostos; contas/arquivos separados; cancelarA permiteB concluir |
+| Identidade visual Percurso | Aplicada; desktop/mobile inspecionados | Logo do kit, navegação, busca e seleção interativas |
+| Workspace prático | Implementado e testado localmente | Grupos de acesso, wizard, campos comuns/override, favoritos, repetição, datas rápidas e resumo |
+| Adaptação SGIND/IQOS real | Aguardando computador autorizado | Não abrir gates antes do teste real |
+| Distribuição Windows e escala remota | Posterior | Jornada local estabilizada antes da distribuição |
 
-## Etapa 2
+Cada processo continua serial. O supervisor inicia2 processos isolados por padrão (--workers1..4), com capabilities privadas distintas; a evidência de paralelismo vem de downloads simultâneos reais. Ampliar testes de perda/restart/filas longas e adaptar sites reais continuam como próximos trabalhos.
 
-Bloqueada até a demonstração completa do marco oficial da Etapa 1.
+Desenho: [fluxos reutilizáveis](../superpowers/specs/2026-10-12-nexer-reusable-flows-design.md). Credenciais entram somente na execução, sem persistência. Não registrar resultados de fixtures como validação de sites corporativos.
 
-## Etapa 3
-
-Bloqueada até a aprovação da Etapa 2.
-
-## Regra
-
-Nenhum avanço de etapa é permitido com falha bloqueante, segredo versionado, documentação crítica desatualizada ou fluxo anterior não demonstrável.
+Plano da simplificação: [workspace prático](../superpowers/plans/2026-10-13-practical-workspace.md). Migração0007 necessária na instalação real; prévia de design usa dados sintéticos e não inicia automações.

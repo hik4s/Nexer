@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from app.execution_credentials import bind_execution_credentials
 from app.security import SESSION_COOKIE_NAME
 from app.worker_channel import worker_channel
+from app.services.profile_execution import profile_configuration
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -103,6 +104,10 @@ def require_validated_corporate_auth(payload: ExecutionCreate) -> None:
 @router.post("", response_model=ExecutionRead, status_code=201)
 def create_execution(payload: ExecutionCreate, request: Request, db: Session = Depends(get_db),
                      corporate_policy: None = Depends(require_validated_corporate_auth)):
+    return prepare_execution(payload, request, db)
+
+
+def prepare_execution(payload: ExecutionCreate, request: Request, db: Session, *, commit=True):
     automations = db.scalars(
         select(Automation).where(Automation.id.in_(payload.automation_ids))
     ).all()
@@ -124,6 +129,7 @@ def create_execution(payload: ExecutionCreate, request: Request, db: Session = D
                            "Credenciais não correspondem às automações selecionadas.")
 
     versions: dict[int, int] = {}
+    login_profiles = {}
     for automation_id in payload.automation_ids:
         automation = by_id[automation_id]
         if automation.status != AutomationStatus.PUBLISHED.value:
@@ -152,7 +158,15 @@ def create_execution(payload: ExecutionCreate, request: Request, db: Session = D
                 "Automation current version is missing",
             )
         _validate_secret_inputs(payload.inputs, version.recipe)
+        if version.recipe.get("login_profile"):
+            key, configuration = profile_configuration(db, version.recipe["login_profile"])
+            login_profiles[key] = configuration
         versions[automation.id] = version.version
+
+    if set(payload.profile_credentials) - set(login_profiles):
+        raise ApiError(422, "PROFILE_CREDENTIALS_MISMATCH", "As credenciais não correspondem aos perfis destes fluxos.")
+    if not payload.test_mode and set(login_profiles) - set(payload.profile_credentials):
+        raise ApiError(422, "PROFILE_CREDENTIALS_REQUIRED", "Informe as credenciais dos perfis usados na execução.")
 
     execution = Execution(
         name=payload.name,
@@ -165,6 +179,7 @@ def create_execution(payload: ExecutionCreate, request: Request, db: Session = D
         overwrite_existing=payload.overwrite_existing,
         test_mode=payload.test_mode,
         inputs=payload.inputs,
+        login_profiles=login_profiles,
         created_at=utcnow(),
         cancel_requested=False,
     )
@@ -172,15 +187,15 @@ def create_execution(payload: ExecutionCreate, request: Request, db: Session = D
     bound_execution_id = None
     try:
         db.flush()
-        if payload.corporate_credentials:
+        if payload.corporate_credentials or payload.profile_credentials:
             bound_execution_id = execution.id
             systems = {
                 system: {"username": credentials.username.get_secret_value(),
                          "password": credentials.password.get_secret_value()}
-                for system, credentials in payload.corporate_credentials.items()
+                for system, credentials in {**payload.corporate_credentials, **payload.profile_credentials}.items()
             }
             try:
-                bind_execution_credentials(execution.id,
+                execution.worker_id = bind_execution_credentials(execution.id,
                     request.cookies.get(SESSION_COOKIE_NAME), systems, db)
             except (RuntimeError, ValueError):
                 raise ApiError(409, "CREDENTIALS_UNAVAILABLE",
@@ -200,7 +215,8 @@ def create_execution(payload: ExecutionCreate, request: Request, db: Session = D
                     attempts=0,
                 )
             )
-        db.commit()
+        if commit: db.commit()
+        else: db.flush()
     except Exception as exc:
         if bound_execution_id is not None:
             worker_channel.revoke(bound_execution_id)
@@ -245,6 +261,10 @@ def get_execution(execution_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{execution_id}/cancel", response_model=ExecutionRead)
 def cancel_execution(execution_id: int, db: Session = Depends(get_db)):
+    return request_execution_cancel(execution_id, db)
+
+
+def request_execution_cancel(execution_id: int, db: Session, *, commit=True):
     execution = get_by_id(db, execution_id)
     if execution is None:
         raise ApiError(404, "EXECUTION_NOT_FOUND", "Execution not found")
@@ -296,6 +316,7 @@ def cancel_execution(execution_id: int, db: Session = Depends(get_db)):
             )
         )
 
-    db.commit()
+    if commit: db.commit()
+    else: db.flush()
     db.refresh(execution)
     return _to_read(execution, get_items(db, execution.id))
