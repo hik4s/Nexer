@@ -1,0 +1,40 @@
+{
+  "brand": "Nexer",
+  "tagline": "Registre uma vez. Execute novamente.",
+  "brief": "Automação de atividades no Edge e Chrome para empresas e projetos pessoais. Uma execução registrada se torna uma rotina prática e rápida.",
+  "adjectives": [
+    "Minimalista",
+    "Premium",
+    "Preciso",
+    "Prático"
+  ],
+  "criteria": "Reconhecimento como N, leitura pequena, arquivos vetoriais e uso claro sobre fundos claros e escuros.",
+  "industry": "consumer-app",
+  "brand_color": "#171719",
+  "greyscale": false,
+  "final": true,
+  "round": 2,
+  "nav": [
+    "Rotinas",
+    "Execuções",
+    "Configurações"
+  ],
+  "concepts": [
+    {
+      "name": "Percurso",
+      "symbol": "nexer-symbol.svg",
+      "lockup": "nexer-horizontal.svg",
+      "stacked": "nexer-stacked.svg",
+      "idea": "Um N dividido por uma pausa diagonal: a execução continua.",
+      "rationale": [
+        "A inicial conecta o símbolo ao nome Nexer.",
+        "O corte cria uma assinatura simples e reproduzível.",
+        "Grafite e branco dão prioridade à forma."
+      ]
+    }
+  ],
+  "recommendation": "Percurso — direção escolhida.",
+  "next_steps": [
+    "Aplicar os arquivos nas interfaces e na extensão."
+  ]
+}

@@ -1,0 +1,75 @@
+import {describe, expect, it, vi} from "vitest";
+import {render, screen, waitFor} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import {MemoryRouter} from "react-router-dom";
+import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
+import {NewFlowPage, recordingFailureMessage} from "./NewFlowPage";
+import {api} from "../lib/api";
+vi.mock("../lib/api", () => ({api: {listLoginProfiles: vi.fn(async () => ({items: []})), startFlowRecording: vi.fn(), getFlowRecording: vi.fn(), cancelFlowRecording: vi.fn(), createAutomation: vi.fn(), createAutomationVersion: vi.fn(), testAutomationVersion: vi.fn(), publishAutomationVersion: vi.fn()}}));
+describe("Guided registration", () => {
+  it("reports safe, actionable recording failure reasons without exposing private values", () => {
+    expect(recordingFailureMessage("RECORDER_EMPTY")).toContain("Nenhuma ação");
+    expect(recordingFailureMessage("RECORDER_BROWSER_FAILED")).toContain("Edge");
+    expect(recordingFailureMessage("RECORDER_DOWNLOAD_UNSUPPORTED")).toContain("download");
+    expect(recordingFailureMessage("private-secret-canary")).not.toContain("private-secret-canary");
+  });
+
+  it("shows discovered labels only after recording finishes", async () => {
+    vi.mocked(api.startFlowRecording).mockResolvedValue({id: "test-recording", status: "RECORDING"} as Awaited<ReturnType<typeof api.startFlowRecording>>);
+    let done = false;
+    vi.mocked(api.getFlowRecording).mockImplementation(async () => ({id: "test-recording", status: done ? "DONE" : "RECORDING", recipe: done ? {variables: {base_url: {type: "string"}, input_001: {type: "string", label: "Data inicial", field: {control: "date"}}}, steps: [{id: "fill", action: "fill"}]} : null}) as Awaited<ReturnType<typeof api.getFlowRecording>>);
+    render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><NewFlowPage /></QueryClientProvider></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Nome do fluxo"), "Novo relatório");
+    await user.type(screen.getByLabelText("Endereço do site"), "http://127.0.0.1/form");
+    await user.click(screen.getByRole("button", {name: "Continuar"}));
+    await user.click(screen.getByRole("button", {name: "Continuar"}));
+    await user.click(screen.getByRole("button", {name: "Gravar ações no Edge"}));
+    expect(screen.queryByLabelText("Nome do campo: input_001")).not.toBeInTheDocument();
+    done = true;
+    await waitFor(() => expect(screen.getByLabelText("Nome do campo: input_001")).toHaveValue("Data inicial"), {timeout: 3000});
+    expect(screen.queryByLabelText("Nome do campo: base_url")).not.toBeInTheDocument();
+  });
+  it("waits for manual Edge preparation before enabling finish", async () => {
+    vi.mocked(api.startFlowRecording).mockResolvedValue({id: "preparing", status: "RECORDING", phase: "PREPARING", recipe: null, error: null});
+    let phase: "PREPARING" | "RECORDING" = "PREPARING";
+    vi.mocked(api.getFlowRecording).mockImplementation(async () => ({id: "preparing", status: "RECORDING", phase, recipe: null, error: null}));
+    vi.mocked(api.cancelFlowRecording).mockResolvedValue({id: "preparing", status: "CANCELLED", recipe: null, error: null});
+    render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><NewFlowPage /></QueryClientProvider></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Nome do fluxo"), "Report");
+    await user.type(screen.getByLabelText("Endereço do site"), "https://example.invalid/sgind/#/report");
+    await user.click(screen.getByRole("button", {name: "Continuar"}));
+    await user.click(screen.getByRole("button", {name: "Continuar"}));
+    await user.click(screen.getByRole("button", {name: "Gravar ações no Edge"}));
+    expect(api.startFlowRecording).toHaveBeenLastCalledWith("https://example.invalid/sgind/#/report");
+    expect(screen.getByRole("button", {name: "Concluir gravação"})).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("faça login no Edge");
+    phase = "RECORDING";
+    await waitFor(() => expect(screen.getByRole("button", {name: "Concluir gravação"})).toBeEnabled(), {timeout: 3000});
+    await user.click(screen.getByRole("button", {name: "Cancelar gravação"}));
+  });
+  it("imports actions, names fields and publishes without executing the recipe", async () => {
+    vi.mocked(api.createAutomation).mockResolvedValue({id: 22, code: "GUIDED", name: "Meu fluxo", current_version: null, status: "DRAFT", system: null, description: null});
+    vi.mocked(api.createAutomationVersion).mockResolvedValue({id: 1, automation_id: 22, version: 1, recipe: {}, created_at: "", created_by: "guided", test_status: null, published: false, published_at: null});
+    vi.mocked(api.testAutomationVersion).mockResolvedValue({version: 1, test_status: "PASSED", automation_status: "DRAFT"});
+    vi.mocked(api.publishAutomationVersion).mockResolvedValue({version: 1, published: true, automation_status: "PUBLISHED"});
+    render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><NewFlowPage /></QueryClientProvider></MemoryRouter>);
+    const user = userEvent.setup();
+    await user.type(screen.getByLabelText("Nome do fluxo"), "Meu fluxo");
+    await user.type(screen.getByLabelText("Endereço do site"), "http://127.0.0.1:8765/form");
+    await user.click(screen.getByRole("button", {name: "Continuar"}));
+    expect(screen.getByLabelText("Acesso para este fluxo")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", {name: "Continuar"}));
+    const file = new File(["{}"], "recipe.json", {type: "application/json"});
+    Object.defineProperty(file, "text", {value: async () => JSON.stringify({schema_version: 1, name: "Recorded", variables: {company: {type: "string"}}, steps: [{id: "fill", action: "fill", selector: "input", value: "{{company}}"}], output: {type: "file"}})});
+    await user.upload(screen.getByLabelText("Importar receita JSON"), file);
+    await user.click(screen.getByRole("button", {name: "Continuar"}));
+    await user.type(screen.getByLabelText("Nome do campo: company"), "Minha empresa");
+    await user.click(screen.getByRole("button", {name: "Continuar"}));
+    expect(api.createAutomation).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", {name: "Validar e publicar fluxo"}));
+    await waitFor(() => expect(api.publishAutomationVersion).toHaveBeenCalledWith(22, 1));
+    expect(vi.mocked(api.createAutomationVersion).mock.lastCall?.[1]).toMatchObject({name: "Meu fluxo", variables: {company: {label: "Minha empresa", type: "string"}}});
+  });
+});

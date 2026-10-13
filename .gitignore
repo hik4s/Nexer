@@ -1,0 +1,87 @@
+# =====================================================
+# Nexer - arquivos locais e sensiveis
+# =====================================================
+
+# Credenciais e variaveis de ambiente
+.env
+.env.*
+!.env.example
+
+# Ambientes virtuais
+venv/
+.venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+node_modules/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+*.egg
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# IDEs e editores
+.vscode/
+.idea/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Arquivos gerados pela automacao
+downloads/
+logs/
+screenshots/
+temp/
+tmp/
+
+# Estado de execucao
+status/status.json
+status/*.pid
+status/*.tmp
+status/encerrar_streamlit.json
+
+# Marcadores e atalhos locais
+.atalho_criado
+*.lnk
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
+# Streamlit local
+.streamlit/secrets.toml
+
+# PyInstaller e distribuicao
+build/
+dist/
+*.spec
+
+# Arquivos de log e diagnostico
+*.log
+*.trace
+
+# Backups locais
+*.bak
+*.backup
+*.old
+*_original.py
+
+# Arquivos temporarios do Office
+~$*
