@@ -122,6 +122,33 @@ class AutomationVersionsApiTests(unittest.TestCase):
             self.assertEqual(response.json()["error"]["code"], "CORPORATE_AUTH_NOT_VALIDATED")
             reader.assert_not_called()
 
+    def test_corporate_profile_flow_can_publish_but_execution_remains_gated(self):
+        profile = self.client.post("/login-profiles", json={
+            "name": "SGIND",
+            "login_url": "https://indicadoresenergisaess.scl.corp/sgind/#/login",
+        }).json()
+        configuration = profile["configuration"]
+        for key, selector in (("username_target", "#user"), ("password_target", "#pass"), ("submit_target", "#submit")):
+            configuration[key] = {"selector": selector, "frames": []}
+        configuration["success_rule"] = {"kind": "marker", "target": {"selector": "#home", "frames": []}}
+        self.client.post(f"/login-profiles/{profile['id']}/versions", json=configuration)
+        self.assertEqual(self.client.post(f"/login-profiles/{profile['id']}/publish", json={"version": 2}).status_code, 200)
+
+        automation_id = self._create_automation()
+        recipe = self._valid_recipe()
+        recipe["login_profile"] = {"id": profile["id"], "version": 2}
+        recipe["steps"][0]["url"] = "https://indicadoresenergisaess.scl.corp/sgind/#/home"
+        self.assertEqual(self.client.post(f"/automations/{automation_id}/versions", json={"recipe": recipe}).status_code, 201)
+        self.assertEqual(self.client.post(f"/automations/{automation_id}/versions/1/test").status_code, 200)
+
+        published = self.client.post(f"/automations/{automation_id}/versions/1/publish")
+        self.assertEqual(published.status_code, 200, published.text)
+        self.assertTrue(published.json()["published"])
+
+        execution = self.client.post("/executions", json={"name": "SGIND", "automation_ids": [automation_id]})
+        self.assertEqual(execution.status_code, 409)
+        self.assertEqual(execution.json()["error"]["code"], "CORPORATE_AUTH_NOT_VALIDATED")
+
     def test_create_test_and_publish_version(self):
         automation_id = self._create_automation()
 

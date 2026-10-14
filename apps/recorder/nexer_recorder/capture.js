@@ -115,9 +115,8 @@
   // Read only structural labels, never control values, selected options, URLs or request bodies.
   document.addEventListener('click', event => {
     const original = target(event);
-    if (!active() || !original) return;
+    if (!active() || !original || original.closest('[data-nexer-recorder]')) return;
     if (manualWaitState) {
-      if (original.closest('[data-nexer-recorder]')) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       const state = manualWaitState;
@@ -245,6 +244,45 @@
     const toolbar = document.createElement('div');
     toolbar.setAttribute('data-nexer-recorder', 'toolbar');
     toolbar.style.cssText = 'position:fixed;top:16px;right:16px;z-index:2147483647;background:#171719;color:white;padding:12px;border-radius:12px;box-shadow:0 4px 20px #0004;font:14px system-ui';
+    const dragHandle = document.createElement('button');
+    dragHandle.type = 'button';
+    dragHandle.setAttribute('data-nexer-recorder-drag-handle', '');
+    dragHandle.setAttribute('aria-label', 'Mover janela de gravação');
+    dragHandle.title = 'Arraste para mover; use as setas do teclado para reposicionar';
+    dragHandle.textContent = 'Arraste para mover';
+    dragHandle.style.cssText = 'display:block;width:100%;margin:0 0 8px;padding:4px 0;background:transparent;color:#c5c5cc;border:0;text-align:left;font:12px system-ui;cursor:grab;touch-action:none;user-select:none';
+    let dragPointer = null;
+    const moveToolbarTo = (left, top) => {
+      const rect = toolbar.getBoundingClientRect();
+      toolbar.style.left = `${Math.min(Math.max(0, window.innerWidth - rect.width), Math.max(0, left))}px`;
+      toolbar.style.top = `${Math.min(Math.max(0, window.innerHeight - rect.height), Math.max(0, top))}px`;
+      toolbar.style.right = 'auto';
+    };
+    dragHandle.addEventListener('pointerdown', event => {
+      if (event.button !== 0 || !event.isPrimary) return;
+      const rect = toolbar.getBoundingClientRect();
+      dragPointer = {id: event.pointerId, x: event.clientX - rect.left, y: event.clientY - rect.top};
+      moveToolbarTo(rect.left, rect.top);
+      dragHandle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    }, {signal: controller.signal});
+    dragHandle.addEventListener('pointermove', event => {
+      if (dragPointer?.id !== event.pointerId) return;
+      moveToolbarTo(event.clientX - dragPointer.x, event.clientY - dragPointer.y);
+    }, {signal: controller.signal});
+    const finishToolbarDrag = event => {
+      if (dragPointer?.id === event.pointerId) dragPointer = null;
+    };
+    dragHandle.addEventListener('pointerup', finishToolbarDrag, {signal: controller.signal});
+    dragHandle.addEventListener('pointercancel', finishToolbarDrag, {signal: controller.signal});
+    dragHandle.addEventListener('keydown', event => {
+      const delta = {ArrowLeft: [-24, 0], ArrowRight: [24, 0], ArrowUp: [0, -24], ArrowDown: [0, 24]}[event.key];
+      if (!delta) return;
+      event.preventDefault();
+      const rect = toolbar.getBoundingClientRect();
+      moveToolbarTo(rect.left + delta[0], rect.top + delta[1]);
+    }, {signal: controller.signal});
+    toolbar.append(dragHandle);
     const button = document.createElement('button');
     button.textContent = active() ? 'Parar gravação' : 'Iniciar gravação';
     button.type = 'button';

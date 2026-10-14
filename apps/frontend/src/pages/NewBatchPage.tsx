@@ -108,7 +108,12 @@ function FlowFields({flow, testMode, prepare, changed, pending, accesses, access
       const inputs = parseValues(parameters.map(([name, declaration]) => [name, {...declaration, required: false}]), values);
       const result = access ? await api.getReportOptions(flow.id, flow.current_version!, inputs, {[access[0]]: access[1]}) : await api.getReportOptions(flow.id, flow.current_version!, inputs);
       if (token === generation.current) {setCatalogs(result.fields); onCatalogs(flow.id, result.fields);}
-    } catch {if (token === generation.current) setError("Não foi possível preparar as opções do site.");}
+    } catch (failure) {
+      if (token === generation.current) {
+        const message = failure instanceof Error ? failure.message : "";
+        setError(message && !message.startsWith("API_REQUEST_FAILED:") ? message : "Não foi possível preparar as opções do site.");
+      }
+    }
     finally {if (access) {access[1].username = ""; access[1].password = "";} setLoading(false);}
   }
   loaders.set(flow.id, loadOptions);

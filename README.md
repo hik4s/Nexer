@@ -1,5 +1,9 @@
 # Nexer
 
+> **Planejamento e continuidade do RPA:** [HANDOFF MASTER — Nexer RPA](docs/HANDOFF_NEXER_RPA_2026-10-14.md). Inclui a visão do produto para distribuição pública, as 26 microtarefas do primeiro relatório, a transição desktop-first e os próximos gates.
+
+> **Instalação do núcleo atual (React/FastAPI):** leia [Instalar Nexer a partir do GitHub](docs/INSTALACAO_DO_GITHUB.md) antes de executar uma cópia clonada/ZIP. Em um clone limpo, execute `Instalar-Nexer.cmd`; o launcher `Abrir-Nexer.cmd` não instala dependências automaticamente e abre em modo `--api-only` (sem worker). `Nexer.bat`/executáveis antigos pertencem ao legado; as instruções de Streamlit abaixo não instalam o núcleo atual.
+
 O Nexer está evoluindo para um aplicativo local de **automações web reutilizáveis**, voltado a tarefas pessoais e profissionais. O núcleo em desenvolvimento usa React, FastAPI, SQLite e Playwright com Edge.
 
 Os pilares do produto são **automações**, **cadastro de perfis de login**, **gravação de fluxos** e **execução de vários fluxos por lote**. Perfis guardam a configuração dos campos, com credenciais informadas somente ao executar. O núcleo inclui seleção de alvos no Edge, receitas versionadas, campos parametrizados, preparação/acompanhamento de lotes e dois workers isolados por padrão. A validação atual usa sites locais sintéticos; os gates SGIND/IQOS continuam fechados.

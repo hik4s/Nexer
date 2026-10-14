@@ -12,7 +12,7 @@ from recipe import RecipeValidationError, validate_recipe
 from app.enums import AutomationStatus
 from app.errors import ApiError
 from app.models import Automation, AutomationVersion
-from app.services.profile_execution import profile_configuration
+from app.services.profile_execution import profile_configuration, validate_profile_reference
 from app.schemas_execution import CorporateCredential
 from app.security import SESSION_COOKIE_NAME, resolve_session
 from browser_manager import BrowserManager
@@ -220,7 +220,7 @@ def publish_version(automation_id: int, version: int, db: Session = Depends(get_
 
     _validate_recipe_contract(item.recipe)
     if item.recipe.get("login_profile"):
-        profile_configuration(db, item.recipe["login_profile"])
+        validate_profile_reference(db, item.recipe["login_profile"])
     automation.current_version = item.version
     automation.status = AutomationStatus.PUBLISHED.value
     item.published_at = item.published_at or _now()

@@ -95,6 +95,44 @@ class EdgeCaptureTests(unittest.TestCase):
                 self.assertEqual(len(context.artifacts), 1)
             finally:
                 browser.close()
+    def test_recording_toolbar_moves_and_its_controls_are_not_captured(self):
+        events = []
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(channel="msedge", headless=True)
+            try:
+                page = browser.new_page(viewport={"width": 1000, "height": 700})
+                page.expose_binding("nexerCapture", lambda source, event: events.append(event))
+                page.expose_binding("nexerFinishRecording", lambda source: None)
+                page.set_content('<button id="target">Target</button>')
+                page.evaluate(recorder_script())
+
+                toolbar = page.locator('[data-nexer-recorder="toolbar"]')
+                handle = page.locator('[data-nexer-recorder-drag-handle]')
+                self.assertEqual(handle.count(), 1, "recording toolbar should expose a drag handle")
+                before = toolbar.bounding_box()
+                handle_box = handle.bounding_box()
+                self.assertIsNotNone(before)
+                self.assertIsNotNone(handle_box)
+
+                page.locator('[aria-label="Tipo da espera inteligente"]').select_option("enabled")
+                page.mouse.move(handle_box["x"] + handle_box["width"] / 2,
+                                handle_box["y"] + handle_box["height"] / 2)
+                page.mouse.down()
+                page.mouse.move(handle_box["x"] + handle_box["width"] / 2 - 120,
+                                handle_box["y"] + handle_box["height"] / 2 + 90, steps=8)
+                page.mouse.up()
+                after = toolbar.bounding_box()
+
+                self.assertGreater(abs(after["x"] - before["x"]), 50)
+                self.assertGreater(abs(after["y"] - before["y"]), 30)
+                self.assertEqual(events, [])
+
+                page.locator("#target").click()
+                page.wait_for_timeout(60)
+                self.assertEqual([event["action"] for event in events], ["click"])
+            finally:
+                browser.close()
+
     def test_labels_stop_toolbar_and_collection_do_not_capture_filled_values(self):
         recording = Recording("Report")
         stopped = []

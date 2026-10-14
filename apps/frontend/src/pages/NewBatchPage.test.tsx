@@ -176,4 +176,13 @@ describe("Batch preparation", () => {
     expect(submitted.items[1].inputs).toEqual({company: "company-b"});
     expect(submitted.items.every(item => item.test_mode)).toBe(true);
   });
+  it("shows the server reason when site options cannot be prepared", async () => {
+    vi.clearAllMocks();
+    vi.mocked(api.listAutomations).mockResolvedValue({items: [{id: 1, code: "FLOW", name: "Flow", status: "PUBLISHED", current_version: 1, description: null, system: null}], total: 1, limit: 50, offset: 0});
+    vi.mocked(api.getAutomationVersion).mockResolvedValue({id: 1, automation_id: 1, version: 1, recipe: {variables: {company: {type: "string", field: {control: "select"}}}}, created_at: "", created_by: null, published: true, published_at: null, test_status: "PASSED"});
+    vi.mocked(api.getReportOptions).mockRejectedValue(new Error("Carregamento corporativo aguarda validação no ambiente autorizado."));
+    render(<MemoryRouter initialEntries={["/batches/new?flows=1"]}><QueryClientProvider client={new QueryClient()}><NewBatchPage /></QueryClientProvider></MemoryRouter>);
+    await userEvent.click(await screen.findByRole("button", {name: "Carregar opções do site"}));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Carregamento corporativo aguarda validação no ambiente autorizado.");
+  });
 });

@@ -1,21 +1,32 @@
-# =====================================================
-# Nexer - arquivos locais e sensiveis
-# =====================================================
+# Nexer — regras para clonar e executar sem compartilhar estado local
+# Versao: 2026-10-14
+# IMPORTANTE: este arquivo nao remove itens JA rastreados pelo Git.
+# Scripts, lockfiles, migrations, assets, receitas e configuracoes de exemplo
+# devem continuar versionados para uma instalacao reproduzivel.
 
-# Credenciais e variaveis de ambiente
+# Segredos e configuracoes locais
 .env
 .env.*
 !.env.example
+!.env.sample
+.streamlit/secrets.toml
+*.p12
+*.pfx
+*.key
+*.pem
 
-# Ambientes virtuais
+# Dependencias instaladas na maquina (recriar com pip/npm ci)
 venv/
 .venv/
 env/
 ENV/
-
-# Python
-__pycache__/
 node_modules/
+.pnpm-store/
+.npm/
+.yarn/cache/
+
+# Cache, cobertura, compilados Python
+__pycache__/
 *.py[cod]
 *$py.class
 *.pyd
@@ -26,62 +37,73 @@ node_modules/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.tox/
+.nox/
 .coverage
 .coverage.*
 htmlcov/
+coverage/
+*.tsbuildinfo
 
-# IDEs e editores
+# Bases SQLite e estado local (as migrations Python DEVEM ir ao Git)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+# O arquivo data/.gitkeep pode ser versionado para preservar a pasta vazia.
+
+# Relatorios extraidos, sessoes, traces e registros de execucao
+downloads/
+logs/
+screenshots/
+playwright-report/
+test-results/
+blob-report/
+temp/
+tmp/
+status/status.json
+status/*.pid
+status/*.tmp
+status/encerrar_streamlit.json
+*.log
+*.trace
+*.har
+*.webm
+*.zip.part
+*.crdownload
+*.partial
+
+# Saidas de build/teste geradas (NAO ignorar arquivos de definicao *.spec)
+build/
+dist/
+.vite/
+.next/
+.astro/
+
+# IDE, SO e atalhos locais
 .vscode/
 .idea/
 *.code-workspace
 *.swp
 *.swo
 *~
-
-# Sistema operacional
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# Arquivos gerados pela automacao
-downloads/
-logs/
-screenshots/
-temp/
-tmp/
-
-# Estado de execucao
-status/status.json
-status/*.pid
-status/*.tmp
-status/encerrar_streamlit.json
-
-# Marcadores e atalhos locais
 .atalho_criado
 *.lnk
 
-# Playwright
-playwright-report/
-test-results/
-blob-report/
-
-# Streamlit local
-.streamlit/secrets.toml
-
-# PyInstaller e distribuicao
-build/
-dist/
-*.spec
-
-# Arquivos de log e diagnostico
-*.log
-*.trace
-
-# Backups locais
+# Backups locais e arquivos temporarios do Office
 *.bak
 *.backup
 *.old
-*_original.py
-
-# Arquivos temporarios do Office
 ~$*
+
+# NAO ignorar: *.exe por regra generica, *.spec, package-lock.json,
+# apps/backend/alembic/versions/*.py, assets, apps/frontend/public e README.
+# Um executavel legado presente no repo NAO substitui instalar o nucleo novo.
