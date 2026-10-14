@@ -66,8 +66,9 @@ def _state(context, reference, step):
 
 _ROWS = r"""(root, c) => {
     const rows = Array.from(root.querySelectorAll(c.rows));
+    const incomplete = !root.isConnected || root.ownerDocument.querySelectorAll(c.rows).length !== rows.length;
     if(rows.length > 1000) return {overflow:true, items:[]};
-    return {overflow:false, items:rows.map(row => {
+    return {overflow:false, incomplete, items:rows.map(row => {
         let nodes = c.name === ':scope' ? [row] : Array.from(row.querySelectorAll(c.name));
         if(nodes.length !== 1) return {invalid:true};
         const copy=nodes[0].cloneNode(true);
@@ -84,7 +85,7 @@ def _rows(scope, collection, deadline):
     if root.count() != 1:
         _fail('DOWNLOAD_BASELINE_UNAVAILABLE')
     data = root.evaluate(_ROWS, collection, timeout=_remaining(deadline))
-    if data['overflow'] or len(data['items']) != scope.locator(collection['rows']).count():
+    if data['overflow'] or data.get('incomplete', False):
         _fail('DOWNLOAD_BASELINE_INCOMPLETE')
     for item in data['items']:
         if item.get('invalid') or not isinstance(item.get('key'), str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,256}', item['key']):

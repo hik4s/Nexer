@@ -4,6 +4,7 @@ import time
 from actions import ActionExecutionError, create_default_registry
 from recipe import validate_recipe
 from resolver import VariableResolver
+from query_execution import QueryExecutionError
 
 
 @dataclass(frozen=True)
@@ -72,6 +73,9 @@ class RecipeRunner:
                     step_succeeded = True
                     break
                 except Exception as exc:
+                    if isinstance(exc, QueryExecutionError) and str(exc) == 'EXECUTION_CANCELLED':
+                        context.checkpoint(step_id=step['id'], step_index=index, status='CANCELLED')
+                        return RunResult(completed_steps=completed, failed_step_id=None, cancelled=True)
                     last_error = exc
                     if attempt >= max_attempts:
                         break

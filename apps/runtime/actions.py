@@ -3,6 +3,7 @@ from fnmatch import fnmatchcase
 import re
 import time
 from download_generation import snapshot_downloads, request_download, correlated_download
+from query_execution import execute_query
 from pathlib import Path, PurePath
 
 
@@ -38,6 +39,7 @@ def create_default_registry() -> ActionRegistry:
     registry.register("switch_tab", _switch_tab)
     registry.register("snapshot_downloads", snapshot_downloads)
     registry.register("request_download", request_download)
+    registry.register("query", execute_query)
     registry.register("download", _download)
     registry.register("validate_file", _validate_file)
     registry.register("check", _check)

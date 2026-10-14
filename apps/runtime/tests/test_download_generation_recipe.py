@@ -23,6 +23,20 @@ def generation_recipe():
 
 
 class GenerationContractTests(unittest.TestCase):
+    def test_snapshot_does_not_compare_to_a_later_collection_generation(self):
+        from unittest.mock import Mock
+        from time import monotonic
+        from download_generation import _rows
+        scope, root, later_rows = Mock(), Mock(), Mock()
+        root.count.return_value = 1
+        root.evaluate.return_value = {'overflow': False, 'incomplete': False,
+                                      'items': [{'name': 'Report.csv', 'key': 'job-a'}]}
+        # The shared central changes before a second browser roundtrip.
+        later_rows.count.return_value = 2
+        scope.locator.side_effect = lambda selector: root if selector == '#table' else later_rows
+        self.assertEqual(_rows(scope, {'container': '#table', 'rows': 'tr'}, monotonic() + 1),
+                         [{'name': 'Report.csv', 'key': 'job-a'}])
+
     def test_valid_contract_is_parameterized_and_does_not_mutate_recipe(self):
         recipe = generation_recipe()
         before = deepcopy(recipe)
