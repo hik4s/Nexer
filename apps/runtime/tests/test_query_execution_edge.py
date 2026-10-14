@@ -135,6 +135,20 @@ class QueryEdgeTests(unittest.TestCase):
             self.run_query('QUERY_EXECUTION_FAILED')
             self.assertEqual(self.page.evaluate('clicks'), 0)
 
+    def test_unexpected_browser_errors_do_not_chain_private_details(self):
+        import traceback
+        from query_execution import execute_query, QueryExecutionError
+        self.fixture()
+        step = self.recipe['steps'][0]
+        step['selector'] = '[private-canary=='
+        try:
+            execute_query(step, self.context)
+        except QueryExecutionError as exc:
+            self.assertEqual(str(exc), 'QUERY_EXECUTION_FAILED')
+            self.assertNotIn('private-canary', ''.join(traceback.format_exception(exc)))
+        else:
+            self.fail('Invalid CSS must fail before clicking')
+
     def test_document_replaced_while_waiting_is_rejected(self):
         self.fixture("c.hidden=false;c.dataset.queryId='new-private-id';setTimeout(()=>location.href='data:text/html,replaced',120)")
         # Chromium blocks some data: navigations; use a same-page document rewrite.

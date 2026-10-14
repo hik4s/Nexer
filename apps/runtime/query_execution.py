@@ -11,7 +11,7 @@ class QueryExecutionError(RuntimeError):
 
 def _fail(code):
     raise QueryExecutionError(code if code in SAFE_QUERY_ERRORS or code == 'EXECUTION_CANCELLED'
-                              else 'QUERY_EXECUTION_FAILED')
+                              else 'QUERY_EXECUTION_FAILED') from None
 
 
 def _remaining(deadline):
