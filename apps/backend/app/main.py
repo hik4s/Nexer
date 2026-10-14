@@ -32,6 +32,8 @@ from contextlib import asynccontextmanager
 from app.security import sweep_sessions
 from app.services.login_recordings import login_recordings
 from app.services.flow_recordings import flow_recordings
+from app.services.target_pickings import target_pickings
+from app.api.target_pickings import router as target_pickings_router
 
 
 @asynccontextmanager
@@ -42,6 +44,7 @@ async def lifespan(application):
             worker_channel.sweep()
             login_recordings.sweep()
             flow_recordings.sweep()
+            target_pickings.sweep()
             await asyncio.sleep(5)
     task = asyncio.create_task(cleanup())
     try:
@@ -49,6 +52,7 @@ async def lifespan(application):
     finally:
         await asyncio.to_thread(login_recordings.close_all)
         await asyncio.to_thread(flow_recordings.close_all)
+        await asyncio.to_thread(target_pickings.close_all)
         task.cancel()
         try:
             await task
@@ -57,6 +61,7 @@ async def lifespan(application):
 
 
 app = FastAPI(title=settings.app_name, version=settings.version, lifespan=lifespan)
+app.include_router(target_pickings_router)
 app.state.started_at = monotonic()
 app.state.requests_total = 0
 

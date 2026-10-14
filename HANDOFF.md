@@ -203,3 +203,9 @@ Rascunhos de correção não se perdem ao remover esperas anteriores ou sincroni
 Limites: reparo por seletor, sem picker visual; frames/tipo/ordem não editados aqui; sem persistência do rascunho após reload; sem alteração da validação SGIND. A validação de formato do seletor na UI não comprova alvo único nem resultado de negócio.
 
 Próximo avanço ainda não implementado: seleção visual assistida para o reparo, preservação de gravação incompleta após componente não suportado, ou inspeção autorizada do portal real. Revisar o relatório antes de escolher; não repetir as entregas de consultas ou revisão.
+
+## 14. Snapshot solicitado e seleção visual em andamento
+
+O usuário solicitou consolidar o contexto e fazer push em 14/10/2026. Leia primeiro [contexto completo](docs/2026-10-14-contexto-completo.md): reúne histórico, decisões, arquitetura, implementação visual, evidências e pendências. As referências anteriores a “sem push” são históricas.
+
+O picker visual foi implementado sobre f1994d5 e preservado como trabalho em andamento: recorder 63 OK, backend 150/138pass/12skip, frontend 106 OK, TypeScript/build registrados como aprovados. Ainda há um achado importante da revisão: recolher details não cancela o picker; corrigir com regressão antes de declarar conclusão. QA visual desktop/mobile do picker e replay integrado ainda pendentes. Specs/plano em docs/superpowers; contrato compartilhado foi colocado em apps/runtime/target_picker_contract.py. Não repetir as entregas anteriores nem presumir validação corporativa.

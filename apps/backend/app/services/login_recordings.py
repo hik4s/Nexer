@@ -26,8 +26,10 @@ class LoginRecordings:
     def _new_entry(self, owner, profile_id, version):
         return {"id": secrets.token_urlsafe(24), "owner": owner, "profile_id": profile_id, "version": version,
             "status": "RECORDING", "targets": {}, "error": None, "expires": self._clock() + 300, "process": None, "thread": None}
+    def _validate_configuration(self, configuration):
+        return LoginConfiguration.model_validate(configuration).model_dump()
     def start(self, owner, profile_id, version, configuration):
-        configuration = LoginConfiguration.model_validate(configuration).model_dump()
+        configuration = self._validate_configuration(configuration)
         with self._lock:
             self.sweep()
             if not self._session_valid(owner): raise RuntimeError("LOGIN_RECORDING_NOT_FOUND")

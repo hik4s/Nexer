@@ -149,6 +149,8 @@ export type AccessGroup = {id: number; name: string};
 export type Routine = {id: number; name: string; items: {automation_id: number; version: number; inputs: Record<string, unknown>}[]};
 export type LoginRecording = {id: string; profile_id: number; version: number; status: string; targets: Partial<Record<"username_target" | "password_target" | "submit_target", LoginTarget>>; error: string | null};
 export type FlowRecording = {id: string; phase?: "PREPARING" | "RECORDING"; status: string; recipe: Record<string, unknown> | null; error: string | null};
+export type TargetKind = 'element' | 'text' | 'select' | 'checkbox' | 'range' | 'color';
+export type TargetPicking = {id: string; status: 'RECORDING' | 'DONE' | 'FAILED' | 'CANCELLED'; phase: 'PREPARING' | 'SELECTING'; target: {selector: string} | null; error: string | null};
 
 export type ReportOptionsResponse = {
   fields: Record<string, {options: {value: string; label: string; disabled: boolean}[]; error: string | null}>;
@@ -255,6 +257,9 @@ export const api = {
   setAccessGroup: (id: number, group_id: number | null) => request<SiteLoginProfile>(`/login-profiles/${id}/group`, {method: "PUT", body: JSON.stringify({group_id})}),
   listRoutines: () => request<{items: Routine[]}>("/routines"),
   startFlowRecording: (url: string) => request<FlowRecording>("/flow-recordings", {method: "POST", body: JSON.stringify({url})}),
+  startTargetPicking: (url: string, kind: TargetKind) => request<TargetPicking>('/target-pickings', {method: 'POST', body: JSON.stringify({url, kind})}),
+  getTargetPicking: (id: string, signal?: AbortSignal) => request<TargetPicking>(`/target-pickings/${id}`, {signal}),
+  cancelTargetPicking: (id: string) => request<TargetPicking>(`/target-pickings/${id}/cancel`, {method: 'POST'}),
   getFlowRecording: (id: string) => request<FlowRecording>(`/flow-recordings/${id}`),
   finishFlowRecording: (id: string) => request<FlowRecording>(`/flow-recordings/${id}/finish`, {method: "POST"}),
   cancelFlowRecording: (id: string) => request<FlowRecording>(`/flow-recordings/${id}/cancel`, {method: "POST"}),
