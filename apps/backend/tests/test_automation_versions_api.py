@@ -153,6 +153,26 @@ class AutomationVersionsApiTests(unittest.TestCase):
         automation = self.client.get(f"/automations/{automation_id}")
         self.assertEqual(automation.json()["current_version"], 1)
 
+    def test_query_contract_round_trip_and_validation(self):
+        automation_id = self._create_automation()
+        recipe = self._valid_recipe()
+        recipe['steps'] = [{'id': 'query', 'action': 'query', 'selector': '#search', 'frames': ['iframe'],
+                           'timeout_ms': 180000,
+                           'confirmation': {'selector': '#confirmation', 'attribute': 'data-query-id'},
+                           'result': {'container': '#result', 'attribute': 'data-query-id',
+                                      'outcomes': {'data': '.data', 'empty': '.empty', 'error': '.error'}}}]
+        endpoint = f'/automations/{automation_id}/versions'
+        self.assertEqual(self.client.post(endpoint, json={'recipe': recipe}).status_code, 201)
+        self.assertEqual(self.client.post(endpoint + '/1/test').json()['test_status'], 'PASSED')
+        self.assertEqual(self.client.post(endpoint + '/1/publish').status_code, 200)
+        self.assertEqual(self.client.get(endpoint + '/1').json()['recipe'], recipe)
+        recipe['steps'][0]['retry'] = {'max_attempts': 2}
+        self.assertEqual(self.client.post(endpoint, json={'recipe': recipe}).status_code, 201)
+        tested = self.client.post(endpoint + '/2/test')
+        self.assertEqual(tested.status_code, 422)
+        self.assertEqual(self.client.get(endpoint + '/2').json()['test_status'], 'FAILED')
+        self.assertEqual(self.client.post(endpoint + '/2/publish').status_code, 409)
+
     def test_publish_rejects_untested_version(self):
         automation_id = self._create_automation()
 

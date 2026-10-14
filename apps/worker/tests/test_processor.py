@@ -361,6 +361,53 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
         finally:
             db.close()
 
+    def _process_query_outcome(self, code):
+        from actions import create_default_registry
+        from runner import RecipeRunner
+        from query_execution import QueryExecutionError
+        execution_id = self._seed_execution()
+        with self.session_factory() as db:
+            version = db.scalar(select(AutomationVersion))
+            version.recipe = {'schema_version': 1, 'name': 'query', 'variables': {}, 'output': {'type': 'none'},
+                              'steps': [{'id': 'query', 'action': 'query', 'selector': '#search',
+                                         'confirmation': {'selector': '#c', 'attribute': 'data-query-id'},
+                                         'result': {'container': '#r', 'attribute': 'data-query-id',
+                                                    'outcomes': {'data': '.data', 'empty': '.empty', 'error': '.error'}}},
+                                        {'id': 'next', 'action': 'click', 'selector': '#next'}]}
+            db.commit()
+        registry, calls = create_default_registry(), []
+        def query(_step, _context):
+            if code:
+                raise QueryExecutionError(code)
+        registry.register('query', query)
+        registry.register('click', lambda *_args: calls.append('next'))
+        worker = WorkerService(session_factory=self.session_factory, worker_id='query-worker',
+                               concurrency_limit=1, hostname='test', pid=999)
+        worker.register()
+        processor = WorkerExecutionProcessor(session_factory=self.session_factory, worker_service=worker,
+            page_factory=lambda *_args: FakePage(), runner=RecipeRunner(registry),
+            downloads_root=Path(self.tmp.name) / 'query-downloads')
+        result = processor.process_once()
+        expected_status = 'CANCELLED' if code == 'EXECUTION_CANCELLED' else 'FAILED' if code else 'SUCCEEDED'
+        self.assertEqual(result.status, expected_status)
+        self.assertEqual(calls, [] if code else ['next'])
+        with self.session_factory() as db:
+            item = db.scalar(select(ExecutionAutomation).where(ExecutionAutomation.execution_id == execution_id))
+            self.assertEqual(item.status, expected_status)
+            self.assertEqual(item.error_detail, code if code and code != 'EXECUTION_CANCELLED' else None)
+
+    def test_query_empty_stops_and_persists_safe_diagnostic(self):
+        self._process_query_outcome('QUERY_NO_DATA')
+
+    def test_query_error_stops_and_persists_safe_diagnostic(self):
+        self._process_query_outcome('QUERY_SITE_ERROR')
+
+    def test_query_cancel_reaches_cancelled_status(self):
+        self._process_query_outcome('EXECUTION_CANCELLED')
+
+    def test_query_data_allows_next_action(self):
+        self._process_query_outcome(None)
+
 
     def test_processor_marks_interrupted_item_cancelled_after_request(self):
         execution_id = self._seed_execution()

@@ -18,6 +18,7 @@ class UnavailableCredentialProvider:
     def get(self, reference):
         raise CredentialResolutionError("CREDENTIALS_UNAVAILABLE")
 from download_contract import SAFE_DOWNLOAD_ERRORS
+from query_contract import SAFE_QUERY_ERRORS
 from context import ExecutionContext
 from runner import RecipeRunner
 
@@ -335,7 +336,7 @@ class WorkerExecutionProcessor:
             self._cancel_item(execution_id, item_id)
             return
         now = self._now()
-        detail = error_detail if error_detail in SAFE_DOWNLOAD_ERRORS else "AUTOMATION_FAILED"
+        detail = error_detail if error_detail in SAFE_DOWNLOAD_ERRORS | SAFE_QUERY_ERRORS else "AUTOMATION_FAILED"
         self._update_item(
             item_id,
             status=ExecutionAutomationStatus.FAILED.value,
@@ -397,6 +398,8 @@ class WorkerExecutionProcessor:
                 }
                 == set()
             ):
+                status = ExecutionStatus.CANCELLED.value
+            elif statuses == {ExecutionAutomationStatus.CANCELLED.value}:
                 status = ExecutionStatus.CANCELLED.value
             elif statuses == {ExecutionAutomationStatus.SUCCEEDED.value}:
                 status = ExecutionStatus.SUCCEEDED.value
