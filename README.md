@@ -537,3 +537,7 @@ Projeto destinado a uso interno e autorizado. Antes de redistribuir, confirme as
 ### Downloads em centrais compartilhadas
 
 A revisão do fluxo permite vincular um download à confirmação de sua solicitação e aguardar o resultado correto, inclusive em lote com conclusão fora de ordem. Consulte [a entrega e os limites de adaptação](docs/2026-10-14-downloads-correlacionados.md). O contrato genérico está implementado; SGIND real ainda depende de evidência de correlação do portal.
+
+### Consultas com resultado verificável
+
+A revisão também permite converter um clique em consulta com confirmação de dados, ausência de dados ou erro. O resultado deve apresentar a identificação da solicitação atual; dados antigos não são aceitos. Veja [configuração, testes e limites](docs/2026-10-14-query-outcomes.md). A primeira versão exige metadado verificável fornecido pelo site/adaptador.

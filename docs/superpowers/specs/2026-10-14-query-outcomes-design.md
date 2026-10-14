@@ -1,6 +1,6 @@
 # Consulta com resultado verificável
 
-Data: 14/10/2026. Estado: proposta para revisão; não implementada.
+Data: 14/10/2026. Estado: aprovada e implementada; evidências em `docs/2026-10-14-query-outcomes.md`.
 Base inspecionada: `04fcece`, branch `codex/smart-recorder-handoff-2026-10-14`.
 
 ## Objetivo e decisões preservadas

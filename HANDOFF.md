@@ -2,6 +2,8 @@
 
 Atualizado em 14/10/2026. Este é o ponto de entrada da continuação. Leia antes de modificar o código. Os documentos antigos são contexto histórico; não comprovam instalação ou validação corporativa atual.
 
+**Continuação mais recente:** o contrato de consultas com resultado correlacionado foi implementado neste mesmo worktree/branch. Leia a seção 12 e `docs/2026-10-14-query-outcomes.md`; a prioridade de desenhar esse contrato, descrita abaixo, já foi atendida. Não reimplementar as quatro tarefas do plano.
+
 ## 1. Objetivo e decisões do usuário
 
 Construir um gravador inteligente, estável e versátil para tarefas comuns, sites dinâmicos e ambientes empresariais. O usuário demonstra um fluxo; o Nexer interpreta ações e transições verificáveis, gera uma receita parametrizada e permite reproduzi-la com entradas diferentes.
@@ -172,4 +174,18 @@ Não habilitar testes corporativos reais ou iniciar workers/API/migrations em ba
 5. Código e testes nas áreas citadas, README de recorder/runtime/worker/backend/frontend.
 6. [Handoff anterior preservado](docs/archive/HANDOFF-before-consolidation-2026-10-14.md), `HANDOFF_NEXER_NEXT_CHAT.md`, `NEXER_WORK_HANDOFF_2026-10-09.md` e roadmaps apenas para recuperar histórico. Se houver divergência operacional, validar código/estado atual antes de agir.
 
-Para retomar: “Leia HANDOFF.md da branch codex/smart-recorder-handoff-2026-10-14, confira a verificação final e continue a inteligência local pelo contrato de resultado de consultas, preservando os limites SGIND.”
+Para retomar: “Leia HANDOFF.md, especialmente a seção 12, e o relatório docs/2026-10-14-query-outcomes.md. O contrato de consultas já está implementado e testado. Confira branch/status e escolha o próximo avanço por evidência real do portal ou revisão guiada, preservando os limites SGIND.”
+
+## 12. Continuação — consultas correlacionadas
+
+Usuário aprovou spec e plano e autorizou execução completa (“Continue. Concedo permissão para tudo”). Implementação inline, com revisão independente ao final. Base desta continuação `3fb7062`; correções finais da implementação em `ede8813`, com documentação consolidada em commit posterior. Commits estão locais na mesma branch, ainda sem push. O checkout principal continua anterior e não recebeu cópia do código.
+
+Nova ação `query`: baseline antes do clique, confirmação nova por atributo allowlisted, resultado com mesma geração e um único estado visível dentre dados/vazio/erro. Só dados permite prosseguir. Vazio é `QUERY_NO_DATA`, status `FAILED`, mensagem explícita; erro/ambiguidade/geração substituída interrompem. Sem retries nem novo status/migração. Cancelamento tipado do runtime chega ao worker; todos os itens cancelados mantêm execução cancelada.
+
+Editor na etapa Campos converte clique simples elegível, preserva contexto e permite descartar edição/voltar ao clique. Mapa de alterações pendentes por editor impede liberar avanço ao salvar só um deles. Histórico apresenta códigos fixos, sem texto do site. Exceções internas não encadeiam dados privados. Correção incidental de snapshot de download tornou a contagem/verificação de linhas atômica, após regressão real de concorrência na suíte completa.
+
+Verificação após correções da revisão: runtime161/151pass/10skip, recorder54/54, worker39/38pass/1skip, backend144/132pass/12skip, frontend86/86. Total484, 461 passaram,23 skips, sem falhas. tsc-b/Vite e QA visual Edge 1280/390 passaram. Evidências/limites e resultado da revisão ficam no relatório da entrega. Os três achados importantes e a perda de restauração exata do clique foram corrigidos com regressões. Sem achados adiados. Evidências locais ignoradas em temp/query-outcomes/.
+
+O protocolo depende de um ID novo e não reutilizado fornecido pela aplicação e ligado à ação atual. Marcador global compartilhado não basta. Site deve declarar os estados terminais corretamente. Sem comprovação SGIND/IQOS, shadow DOM, navegação completa durante query, ramificação ou retomada. Não tratar testes sintéticos como aprovação corporativa.
+
+Próximo escopo a escolher: inspecionar evidência real de confirmação de consulta/download no portal autorizado; ou reduzir configuração técnica na revisão por adaptadores/reparo pontual. Preservar método B e limites de dados/instalação. A feature genérica de consulta já existe; revisar os commits e relatório antes de começar qualquer nova implementação.
