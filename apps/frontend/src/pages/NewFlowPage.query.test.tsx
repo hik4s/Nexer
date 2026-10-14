@@ -32,6 +32,7 @@ it('keeps other query and download editors pending when one is applied, then pub
   const download=within(screen.getByRole('group',{name:'Vincular download à solicitação'}));
   fireEvent.change(download.getByLabelText('Contêiner da central'),{target:{value:'#downloads'}});
   expect(screen.getByRole('button',{name:'Continuar'})).toBeDisabled();
+  expect(screen.getByRole('button',{name:'Voltar'})).toBeDisabled();
   await user.click(first.getByText('Aplicar consulta'));
   expect(screen.getByRole('button',{name:'Continuar'})).toBeDisabled();
   await user.click(second.getByText('Descartar edição'));
@@ -48,4 +49,32 @@ it('keeps other query and download editors pending when one is applied, then pub
     expect.objectContaining({id:'q2',action:'click'}),
     expect.objectContaining({id:'generate',action:'request_download'}),
   ])});
+});
+
+it('restores the original click after leaving and returning to the review step',async()=>{
+  render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><NewFlowPage/></QueryClientProvider></MemoryRouter>);
+  const user=userEvent.setup();
+  fireEvent.change(screen.getByLabelText('Nome do fluxo'),{target:{value:'Restore'}});
+  fireEvent.change(screen.getByLabelText('Endereço do site'),{target:{value:'http://127.0.0.1/form'}});
+  await user.click(screen.getByText('Continuar'));await user.click(screen.getByText('Continuar'));
+  const original={id:'query',action:'click',selector:'#search',timeout_ms:5000,button:'left',click_count:1,frames:['iframe']};
+  const recipe={schema_version:1,name:'Restore',variables:{},output:{type:'none'},steps:[original]};
+  const file=new File(['{}'],'restore.json',{type:'application/json'});
+  Object.defineProperty(file,'text',{value:async()=>JSON.stringify(recipe)});
+  await user.upload(screen.getByLabelText('Importar receita JSON'),file);
+  await user.click(screen.getByText('Continuar'));await user.click(screen.getByText('Consulta · query'));
+  for(const [label,value] of [['Confirmação da consulta','#c'],['Contêiner do resultado','#r'],['Estado com dados','.data'],['Estado sem dados','.empty'],['Estado de erro','.error']])
+    fireEvent.change(screen.getByLabelText(label),{target:{value}});
+  await user.click(screen.getByText('Aplicar consulta'));
+  expect(screen.getByText('Voltar ao clique')).toBeInTheDocument();
+  await user.click(screen.getByRole('button',{name:'Continuar'}));
+  expect(screen.getByRole('heading',{name:'Publicar'})).toBeInTheDocument();
+  await user.click(screen.getByRole('button',{name:'Voltar'}));
+  expect(screen.getByRole('heading',{name:'Campos'})).toBeInTheDocument();
+  await user.click(screen.getByText('Consulta · query'));
+  await user.click(screen.getByText('Voltar ao clique'));
+  await user.click(screen.getByRole('button',{name:'Continuar'}));
+  await user.click(screen.getByText('Validar e publicar fluxo'));
+  const configured=vi.mocked(api.createAutomationVersion).mock.calls.at(-1)?.[1] as {steps:Record<string,unknown>[]};
+  expect(configured.steps.find(s=>s.id==='query')).toEqual(original);
 });

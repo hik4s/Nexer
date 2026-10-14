@@ -1,10 +1,10 @@
 import {useRef,useState} from 'react';
 import {configureQuery,removeQuery,queryConfig,queryIdentityAttributes,type Recipe,type Step,type QueryOutcomeConfig} from '../lib/queryOutcome';
 
-type Props={recipe:Recipe;stepId:string;onChange:(recipe:Recipe)=>void;onDirty:(dirty:boolean)=>void};
-export function QueryOutcomeEditor({recipe,stepId,onChange,onDirty}:Props){
+type Props={recipe:Recipe;stepId:string;originalStep?:Step;onChange:(recipe:Recipe)=>void;onDirty:(dirty:boolean)=>void};
+export function QueryOutcomeEditor({recipe,stepId,originalStep,onChange,onDirty}:Props){
   const step=recipe.steps.find(s=>s.id===stepId)!;
-  const original=useRef<Step|null>(step.action==='click'?structuredClone(step):null);
+  const original=useRef<Step|null>(originalStep?structuredClone(originalStep):step.action==='click'?structuredClone(step):null);
   const [config,setConfig]=useState(()=>queryConfig(step));
   const [error,setError]=useState('');
   function update<K extends keyof QueryOutcomeConfig>(key:K,value:QueryOutcomeConfig[K]){

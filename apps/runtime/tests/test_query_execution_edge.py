@@ -126,6 +126,38 @@ class QueryEdgeTests(unittest.TestCase):
         self.context.cancellation_requested = cancelled
         self.assertTrue(self.run_query().cancelled)
 
+    def test_final_authorization_cannot_replace_accepted_generation_or_document(self):
+        cases = [(script, trigger) for trigger in (3, 4) for script in [
+            "confirmation.dataset.queryId='other';result.dataset.queryId='other'",
+            "document.open();document.write('<div>other document</div>');document.close()"]]
+        for script, trigger in cases:
+            with self.subTest(script=script, trigger=trigger):
+                self.context.auth_guard = None
+                self.fixture("c.hidden=false;c.dataset.queryId='new-private-id';r.dataset.queryId='new-private-id'")
+                page = self.page
+                class Guard:
+                    after_click = 0
+                    replaced = False
+                    def ensure_authenticated(self, current):
+                        if page.evaluate('clicks'):
+                            self.after_click += 1
+                            if self.after_click == trigger:
+                                self.replaced = True
+                                page.evaluate('script=>{eval(script)}', script)
+                        return current
+                guard = Guard()
+                self.context.auth_guard = guard
+                result = RecipeRunner().run(self.recipe, self.context)
+                if guard.replaced:
+                    self.assertIsNotNone(result.error)
+                    self.assertEqual(result.completed_steps, 0)
+                else:
+                    self.assertEqual(page.locator('#result').get_attribute('data-query-id'), 'new-private-id')
+
+    def test_same_task_confirmation_supersession_is_not_accepted(self):
+        self.fixture("c.hidden=false;c.dataset.queryId='new-private-id';c.dataset.queryId='other';r.dataset.queryId='other'")
+        self.run_query('QUERY_SUPERSEDED')
+
     def test_invalid_resolved_selector_is_sanitized_before_effect(self):
         for selector in ['[', '', 'x' * 2049]:
             self.fixture()

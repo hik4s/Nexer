@@ -63,8 +63,34 @@ _PREPARE = r"""(root, cfg) => {
         if(active.length>1) return {error:'QUERY_OUTCOME_AMBIGUOUS'};
         return {confirmed:true,outcome:active[0]||null};
     };
-    state.observer=new MutationObserver(()=>{if(state.armed) state.check()});
-    state.observer.observe(root,{subtree:true,attributes:true,childList:true});
+    const remember=value=>{
+        if(!value || old.includes(value)) return;
+        if(!identity(value)) {state.error='QUERY_IDENTITY_INVALID';return}
+        if(state.seen && state.seen!==value) state.error='QUERY_SUPERSEDED';
+        else state.seen=value;
+    };
+    const recordNode=node=>{
+        if(node.nodeType!==1) return;
+        if(node.matches(cfg.confirmation.selector)) remember(node.getAttribute(cfg.confirmation.attribute));
+        for(const c of node.querySelectorAll(cfg.confirmation.selector)) remember(c.getAttribute(cfg.confirmation.attribute));
+    };
+    state.observer=new MutationObserver(records=>{
+        if(!state.armed) return;
+        if(records.length>1000) {state.error='QUERY_EXECUTION_FAILED';return}
+        for(const record of records) {
+            if(record.type==='attributes' && record.attributeName===cfg.confirmation.attribute &&
+               (record.target===c || record.target.matches(cfg.confirmation.selector))) {
+                remember(record.oldValue);
+                remember(record.target.getAttribute(cfg.confirmation.attribute));
+            } else if(record.type==='childList') {
+                for(const node of record.addedNodes) recordNode(node);
+                for(const node of record.removedNodes) recordNode(node);
+            }
+        }
+        state.check();
+    });
+    state.observer.observe(root,{subtree:true,attributes:true,attributeOldValue:true,
+        attributeFilter:[cfg.confirmation.attribute],childList:true});
     return state;
 }"""
 
@@ -88,18 +114,20 @@ def execute_query(step: dict, context) -> None:
     frame = None
     phase = 'QUERY_CONFIRMATION_TIMEOUT'
 
-    def check():
+    def check(*, authorize=True):
         if context.is_cancellation_requested():
             _fail('EXECUTION_CANCELLED')
         if context.page is not page or page.is_closed():
             _fail('QUERY_CONTEXT_MISMATCH')
-        if context.auth_guard is not None:
+        if authorize and context.auth_guard is not None:
             try:
                 authorized = context.auth_guard.ensure_authenticated(page)
             except Exception:
                 _fail('QUERY_AUTHORIZATION_REVOKED')
             if authorized is not None and authorized is not page:
                 _fail('QUERY_CONTEXT_MISMATCH')
+        if context.page is not page or page.is_closed():
+            _fail('QUERY_CONTEXT_MISMATCH')
         if monotonic() >= deadline:
             _fail(phase)
 
@@ -161,7 +189,8 @@ def execute_query(step: dict, context) -> None:
                 final = snapshot()
                 if final.get('outcome') != data['outcome']:
                     _fail('QUERY_OUTCOME_AMBIGUOUS')
-                check()
+                # No authorization/browser work after the final atomic DOM snapshot.
+                check(authorize=False)
                 if data['outcome'] == 'empty':
                     _fail('QUERY_NO_DATA')
                 if data['outcome'] == 'error':
