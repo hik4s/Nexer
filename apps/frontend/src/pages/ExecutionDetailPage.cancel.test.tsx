@@ -58,6 +58,15 @@ const queued = {
 };
 
 describe("ExecutionDetailPage cancellation", () => {
+  it('explains an empty query without echoing site content', async()=>{
+    vi.mocked(api.getExecution).mockResolvedValue({...queued,status:'FAILED',items:[
+      {id:1,automation_id:11,automation_version:1,status:'FAILED',stage:'FAILED',error_detail:'QUERY_NO_DATA'},
+      {id:2,automation_id:12,automation_version:1,status:'FAILED',stage:'FAILED',error_detail:'QUERY_SITE_ERROR'},
+    ]} as Awaited<ReturnType<typeof api.getExecution>>);
+    renderPage();
+    await waitFor(()=>expect(screen.getByText('Consulta concluída sem dados; etapas seguintes não executadas.')).toBeInTheDocument());
+    expect(screen.getByText(/site informou um erro/)).toBeInTheDocument();
+  });
   it("shows safe download guidance without echoing unknown failure details", async () => {
     vi.mocked(api.getExecution).mockResolvedValue({...queued,status:'FAILED',items:[
       {id:1,automation_id:11,automation_version:1,status:'FAILED',stage:'FAILED',error_detail:'DOWNLOAD_MATCH_AMBIGUOUS'},
