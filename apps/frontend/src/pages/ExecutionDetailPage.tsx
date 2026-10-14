@@ -1,3 +1,4 @@
+import {downloadErrorMessage} from "../lib/downloadGeneration";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -108,6 +109,7 @@ export function ExecutionDetailPage() {
                   <p className="muted">
                     versão {item.automation_version} · {item.stage}
                   </p>
+                  {item.status === "FAILED" ? <p role="status">{downloadErrorMessage(item.error_detail)}</p> : null}
                 </div>
                 <span className="badge">
                   {labels[item.status] ?? item.status}

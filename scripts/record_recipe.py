@@ -12,6 +12,8 @@ for relative in ("apps/runtime", "apps/recorder"):
     sys.path.insert(0, str(ROOT / relative))
 from site_urls import validate_site_url, site_origin
 from nexer_recorder.compiler import Recording
+from nexer_recorder.readiness import normalize_readiness
+from nexer_recorder.scripts import recorder_script
 from playwright.sync_api import sync_playwright
 
 
@@ -99,19 +101,9 @@ def main(*, stop_event=None, finish_event=None, on_started=None):
                     active_page = source_page
                 if source["frame"].parent_frame is not None and not event.get("frames"):
                     raise ValueError("RECORDER_FRAME_UNSUPPORTED")
-                readiness = event.get("readiness")
-                if readiness is not None:
-                    if readiness != "enabled" or event.get("action") not in {"click", "download"}:
-                        raise ValueError("RECORDER_EVENT_INVALID")
-                    event = {key: value for key, value in event.items() if key != "readiness"}
-                    if not (event.get("action") == "download" and "collection" in event):
-                        previous = recording.steps[-1]
-                        if not (previous.get("action") == "wait_for"
-                                and previous.get("selector") == event.get("selector")
-                                and previous.get("frames", []) == event.get("frames", [])):
-                            recording.accept({"action": "wait_for", "selector": event["selector"],
-                                              "frames": event.get("frames", []), "state": "enabled",
-                                              "learning": {"source": "automatic", "confidence": "high"}})
+                wait, event = normalize_readiness(event, recording.steps[-1])
+                if wait is not None:
+                    recording.accept(wait)
                 recording.accept(event)
                 if event.get("action") == "click" and event.get("button", "left") == "left" and event.get("click_count", 1) == 1:
                     recent_click = (source_page, len(recording.steps) - 1, monotonic())
@@ -163,7 +155,7 @@ def main(*, stop_event=None, finish_event=None, on_started=None):
             observed_download_at.clear()
             for current in context.pages:
                 for frame in current.frames:
-                    try: frame.evaluate("window.__nexerRecorderActive = true")
+                    try: frame.evaluate("window.__nexerRecorderActive = true; window.__nexerIntelligence?.reset()")
                     except Exception: pass
             if on_started is not None: on_started()
             return {"started": True}
@@ -174,7 +166,7 @@ def main(*, stop_event=None, finish_event=None, on_started=None):
         context.expose_binding("nexerCapture", capture)
         context.expose_binding("nexerUnsupported", reject_context)
         context.expose_binding("nexerFinishRecording", lambda source: finish_event.set() if not preparing else None)
-        context.add_init_script(path=ROOT / "apps/recorder/nexer_recorder/capture.js")
+        context.add_init_script(script=recorder_script())
         context.add_init_script("window.__nexerDownloadSelectors = " + json.dumps(options.download_selector))
         page = context.new_page()
         def attach_downloads(source_page):

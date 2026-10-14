@@ -19,6 +19,13 @@ class RecipeRunner:
         self.registry = registry or create_default_registry()
 
     def run(self, recipe: dict, context) -> RunResult:
+        context.download_state.clear()
+        try:
+            return self._run(recipe, context)
+        finally:
+            context.download_state.clear()
+
+    def _run(self, recipe: dict, context) -> RunResult:
         validated = validate_recipe(recipe)
         resolver = VariableResolver(
             declarations=validated.get("variables", {}),

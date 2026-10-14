@@ -1,12 +1,25 @@
 (() => {
-  const install = () => {
+  window.__nexerRecorderBootstrap?.abort();
   window.__nexerRecorderController?.abort();
+  const bootstrap = new AbortController();
+  window.__nexerRecorderBootstrap = bootstrap;
+  window.__nexerRecorderInstalled = false;
+  let initialization = 0;
+  let replacing = false;
+  const install = () => {
+  replacing = true;
+  window.__nexerRecorderController?.abort();
+  replacing = false;
+  if (bootstrap.signal.aborted) return;
   const controller = new AbortController();
   window.__nexerRecorderController = controller;
+  bootstrap.signal.addEventListener('abort', () => controller.abort(), {once: true, signal: controller.signal});
+  controller.signal.addEventListener('abort', () => { if (!replacing) bootstrap.abort(); }, {once: true});
   const options = {capture: true, signal: controller.signal};
   window.__nexerRecorderDocument = document;
   window.__nexerRecorderInstalled = true;
   const active = () => window.__nexerRecorderActive !== false;
+  window.__nexerIntelligence?.install(controller.signal);
   const semantic = new Set(['period_start', 'period_end', 'company', 'regional']);
   const parent = element => element.parentElement || element.getRootNode().host || null;
   const blocked = element => {
@@ -18,21 +31,7 @@
     }
     return false;
   };
-  const selector = element => {
-    const root = element.getRootNode();
-    if (root === document && semantic.has(element.id) && document.querySelectorAll('#' + element.id).length === 1) return '#' + element.id;
-    const parts = [];
-    while (element && element.nodeType === 1) {
-      const tag = element.tagName.toLowerCase();
-      if (!/^[a-z][a-z0-9-]*$/.test(tag)) return null;
-      const siblings = element.parentElement ? [...element.parentElement.children].filter(child => child.tagName === element.tagName) :
-        [...element.getRootNode().children].filter(child => child.tagName === element.tagName);
-      parts.unshift(tag + ':nth-of-type(' + (siblings.indexOf(element) + 1) + ')');
-      element = element.parentElement;
-    }
-    const local = parts.join(' > ');
-    return root.host ? selector(root.host) + ' ' + local : local;
-  };
+  const selector = element => window.__nexerSelectors.forElement(element);
   window.__nexerStructuralSelector = selector;
   const fieldSnapshots = new WeakMap();
   const labelSnapshots = new WeakMap();
@@ -77,7 +76,7 @@
   const send = (action, element, extra = {}) => {
     if (!active() || controller.signal.aborted || !(element instanceof Element) || blocked(element)) return false;
     const location = selector(element);
-    if (!location) return false;
+    if (!location) { window.nexerUnsupported?.('selector'); return false; }
     const frames = [];
     try {
       for (let owner = window; owner !== owner.top; owner = owner.parent) {
@@ -91,11 +90,11 @@
       field = fieldSnapshots.get(element) || {control: action === 'choose_radio' ? 'radio' : action === 'choose' ? 'select' : 'text'};
     }
     const label = field ? labelSnapshots.get(element) : null;
-    const readiness = ['click', 'download', 'fill', 'select', 'check', 'choose', 'set_value'].includes(action)
-      ? window.__nexerReadinessFor?.(element) : null;
+    const readiness = ['click', 'download', 'fill', 'select', 'check', 'choose', 'choose_radio', 'set_value'].includes(action)
+      ? window.__nexerIntelligence?.readinessFor(element) : null;
     window.nexerCapture({action, selector: location, ...extra, ...(readiness ? {readiness} : {}),
       ...(field ? {field} : {}), ...(label ? {label} : {}), ...(frames.length ? {frames} : {})}).catch(() => {});
-    if (!['scroll', 'hover'].includes(action)) window.__nexerActionRecorded?.();
+    if (!['scroll', 'hover', 'wait_for'].includes(action)) window.__nexerIntelligence?.recordAction();
     return true;
   };
   const parameter = element => semantic.has(element.id) ? {parameter: element.id} : {};
@@ -111,21 +110,6 @@
     }
   };
   let activation = null;
-  // Learn only structural readiness transitions. No field values or page text.
-  const enabledAt = new WeakMap();
-  const readinessObserver = new MutationObserver(changes => {
-    if (!active()) return;
-    for (const change of changes) {
-      if (!(change.target instanceof Element)) continue;
-      if (change.attributeName === 'disabled' && change.oldValue !== null &&
-          !change.target.hasAttribute('disabled')) enabledAt.set(change.target, performance.now());
-      if (change.attributeName === 'aria-disabled' && change.oldValue === 'true' &&
-          change.target.getAttribute('aria-disabled') === 'false') enabledAt.set(change.target, performance.now());
-    }
-  });
-  readinessObserver.observe(document, {subtree: true, attributes: true,
-    attributeOldValue: true, attributeFilter: ['disabled', 'aria-disabled']});
-  controller.signal.addEventListener('abort', () => readinessObserver.disconnect(), {once: true});
   let manualWaitState = null;
   let guideManualWait = () => {};
   // Read only structural labels, never control values, selected options, URLs or request bodies.
@@ -168,20 +152,16 @@
     const row = download ? element.closest('tr,li,[role="row"],[role="listitem"]') : null;
     let collection;
     if (row && row.parentElement) {
-      const rowLocation = selector(row);
-      const buttonLocation = selector(element);
-      if (rowLocation && buttonLocation?.startsWith(rowLocation + ' > ')) {
-        collection = {rows: selector(row.parentElement) + ' > ' + row.tagName.toLowerCase(),
+      const relativeButton = window.__nexerSelectors.relativeTo(element, row);
+      const container = selector(row.parentElement);
+      if (relativeButton && container) {
+        collection = {rows: container + ' > ' + row.tagName.toLowerCase(),
           name: row.matches('tr') ? 'td:first-child' : ':scope',
-          button: buttonLocation.slice(rowLocation.length + 3)};
+          button: relativeButton};
       }
     }
-    const readiness = enabledAt.get(element);
-    const learned = readiness !== undefined && performance.now() - readiness < 90000 &&
-      !element.matches(':disabled,[aria-disabled="true"]') && !(download && collection)
-      ? {readiness: 'enabled'} : {};
     send(download ? 'download' : 'click', element,
-      {...(download && collection ? {collection} : !download && event.detail > 1 ? {click_count: Math.min(event.detail, 3)} : {}), ...learned});
+      {...(download && collection ? {collection} : !download && event.detail > 1 ? {click_count: Math.min(event.detail, 3)} : {})});
   }, options);
   for (const [eventName, button] of [['contextmenu', 'right'], ['auxclick', 'middle']]) {
     document.addEventListener(eventName, event => {
@@ -281,7 +261,7 @@
             await new Promise(resolve => setTimeout(resolve, 100));
             result = await window.nexerStartRecordingStatus();
           }
-          if (result.started) { window.__nexerRecorderActive = true; button.textContent = 'Parar gravação'; guidance.textContent = 'Gravando ações.'; }
+          if (result.started) { window.__nexerRecorderActive = true; window.__nexerIntelligence?.reset(); button.textContent = 'Parar gravação'; guidance.textContent = 'Gravando ações.'; }
           else guidance.textContent = result.message;
         } catch { guidance.textContent = 'Não foi possível iniciar. Revise a página configurada.'; }
         button.disabled = false;
@@ -323,15 +303,21 @@
   }
   };
   const initialize = async () => {
+    const revision = ++initialization;
+    if (bootstrap.signal.aborted) return;
     if (typeof window.nexerRecordingState === 'function') {
       window.__nexerRecorderActive = false;
-      try { window.__nexerRecorderActive = await window.nexerRecordingState(); }
+      let recordingActive;
+      try { recordingActive = await window.nexerRecordingState(); }
       catch { return; }
+      if (bootstrap.signal.aborted || revision !== initialization) return;
+      window.__nexerRecorderActive = recordingActive;
     }
+    if (bootstrap.signal.aborted || revision !== initialization) return;
     install();
   };
   initialize();
-  window.addEventListener('DOMContentLoaded', initialize);
+  if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', initialize, {once: true, signal: bootstrap.signal});
 })();
 
 

@@ -58,6 +58,16 @@ const queued = {
 };
 
 describe("ExecutionDetailPage cancellation", () => {
+  it("shows safe download guidance without echoing unknown failure details", async () => {
+    vi.mocked(api.getExecution).mockResolvedValue({...queued,status:'FAILED',items:[
+      {id:1,automation_id:11,automation_version:1,status:'FAILED',stage:'FAILED',error_detail:'DOWNLOAD_MATCH_AMBIGUOUS'},
+      {id:2,automation_id:12,automation_version:1,status:'FAILED',stage:'FAILED',error_detail:'private-canary'},
+    ]} as Awaited<ReturnType<typeof api.getExecution>>);
+    renderPage();
+    await waitFor(()=>expect(screen.getByText('A central contém mais de um resultado para esta solicitação.')).toBeInTheDocument());
+    expect(screen.getByText('A automação falhou. Revise o fluxo e tente novamente.')).toBeInTheDocument();
+    expect(screen.queryByText(/private-canary/)).not.toBeInTheDocument();
+  });
   it("cancels queued execution", async () => {
     vi.mocked(api.getExecution).mockResolvedValue(queued);
     vi.mocked(api.cancelExecution).mockResolvedValue({

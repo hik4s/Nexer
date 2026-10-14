@@ -1,6 +1,7 @@
 import re
 from copy import deepcopy
 from field_schema import validate_field
+from download_contract import validate_generation_steps, validate_collection
 
 
 KNOWN_ACTIONS = {
@@ -15,6 +16,7 @@ KNOWN_ACTIONS = {
     "download",
     "validate_file",
     "check", "set_value", "choose", "choose_radio", "scroll", "hover", "drag", "close_tab",
+    "snapshot_downloads", "request_download",
 }
 
 _VARIABLE_PATTERN = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
@@ -99,6 +101,11 @@ def validate_recipe(recipe: dict) -> dict:
                     raise RecipeValidationError(
                         f"UNDECLARED_VARIABLE:{variable}"
                     )
+
+    try:
+        validate_generation_steps(steps)
+    except ValueError as exc:
+        raise RecipeValidationError(str(exc)) from None
 
     authentication = normalized.get("authentication")
     if authentication is not None:
@@ -194,7 +201,9 @@ def _validate_step_requirements(action: str, step: dict) -> None:
         raise RecipeValidationError("INPUT_TYPE_INVALID")
     if action == "choose_radio" and (type(step.get("group_index", 0)) is not int or not 0 <= step.get("group_index", 0) <= 1000):
         raise RecipeValidationError("RADIO_GROUP_INVALID")
-    if "timeout_ms" in step and (type(step["timeout_ms"]) is not int or not 100 <= step["timeout_ms"] <= 180000):
+    correlated = action == "request_download" or (action == "download" and "generation" in step)
+    lower, upper = (60000, 900000) if correlated else (100, 180000)
+    if "timeout_ms" in step and (type(step["timeout_ms"]) is not int or not lower <= step["timeout_ms"] <= upper):
         raise RecipeValidationError("STEP_TIMEOUT_INVALID")
     if "learning" in step:
         learning = step["learning"]
@@ -208,7 +217,7 @@ def _validate_step_requirements(action: str, step: dict) -> None:
             if not _VARIABLE_PATTERN.fullmatch(url.strip()):
                 raise RecipeValidationError("UNSAFE_URL")
 
-    if action in {"click", "fill", "select", "press", "wait_for", "download", "check", "set_value", "choose", "choose_radio", "scroll", "hover", "drag"}:
+    if action in {"click", "fill", "select", "press", "wait_for", "download", "check", "set_value", "choose", "choose_radio", "scroll", "hover", "drag", "request_download"}:
         selector = step.get("selector")
         if not isinstance(selector, str) or not selector.strip():
             raise RecipeValidationError("SELECTOR_REQUIRED")
@@ -234,10 +243,10 @@ def _validate_step_requirements(action: str, step: dict) -> None:
         if "preserve_filename" in step and type(step["preserve_filename"]) is not bool:
             raise RecipeValidationError("DOWNLOAD_FILENAME_INVALID")
         if "collection" in step:
-            collection = step["collection"]
-            if (not isinstance(collection, dict) or set(collection) != {"rows", "name", "button", "pattern"}
-                    or any(not isinstance(value, str) or not value.strip() or len(value) > 2048 for value in collection.values())):
-                raise RecipeValidationError("DOWNLOAD_COLLECTION_INVALID")
+            try:
+                validate_collection(step["collection"], extended="generation" in step or (isinstance(step["collection"], dict) and "shared" in step["collection"]))
+            except (ValueError, TypeError):
+                raise RecipeValidationError("DOWNLOAD_COLLECTION_INVALID") from None
         filename = step.get("filename")
         if not isinstance(filename, str) or not filename.strip():
             raise RecipeValidationError("DOWNLOAD_FILENAME_REQUIRED")

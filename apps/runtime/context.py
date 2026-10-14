@@ -18,6 +18,7 @@ class ExecutionContext:
     current_step_id: str | None = None
     cancellation_requested: Callable[[], bool] | None = None
     auth_guard: object | None = None
+    download_state: dict = field(default_factory=dict, repr=False)
 
     def __post_init__(self):
         self.downloads_dir = Path(self.downloads_dir)

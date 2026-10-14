@@ -8,6 +8,8 @@ A interface usa a identidade Percurso do `nexer-logo-kit`: grafite, branco e fun
 
 O workspace simplificado reúne **Meus fluxos**, **Acessos** e **Execuções**. Inclui cadastro guiado, grupos de acesso com destinos distintos, rotinas favoritas, campos compartilhados com ajustes individuais, períodos rápidos, resumo antes de iniciar e repetição com parâmetros revisados. Gravação direta aceita HTTPS com rotas como `#/caminho`, em modo de preparação para login manual, e HTTP local. A tela de pareamento permite gerar novo token no console; Acessos oferece exclusão confirmada de perfis sem vínculos. Execução autenticada corporativa continua sujeita à validação própria. Aplicar migrações até0007 antes de usar a instalação real.
 
+- [Handoff consolidado e próximos passos](HANDOFF.md)
+- [Verificação completa antes do commit](docs/2026-10-14-verificacao-handoff.md)
 - [Direção e desenho atual](docs/superpowers/specs/2026-10-12-nexer-reusable-flows-design.md)
 - [Roadmap atualizado](docs/development/ROADMAP.md)
 - [Gravar, importar e reutilizar receitas](apps/recorder/README.md)
@@ -530,3 +532,8 @@ Versão final funcional, com:
 ## Licença e uso
 
 Projeto destinado a uso interno e autorizado. Antes de redistribuir, confirme as políticas da organização sobre credenciais, sistemas internos, dados dos relatórios e executáveis.
+
+
+### Downloads em centrais compartilhadas
+
+A revisão do fluxo permite vincular um download à confirmação de sua solicitação e aguardar o resultado correto, inclusive em lote com conclusão fora de ordem. Consulte [a entrega e os limites de adaptação](docs/2026-10-14-downloads-correlacionados.md). O contrato genérico está implementado; SGIND real ainda depende de evidência de correlação do portal.

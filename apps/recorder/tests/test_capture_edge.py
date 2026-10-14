@@ -5,11 +5,17 @@ from pathlib import Path
 import unittest
 
 from nexer_recorder.compiler import Recording
+from nexer_recorder.scripts import recorder_script
+from nexer_recorder.readiness import normalize_readiness
 from playwright.sync_api import sync_playwright
 from actions import create_default_registry
 from context import ExecutionContext
 
-CAPTURE = Path(__file__).resolve().parents[1] / "nexer_recorder/capture.js"
+def accept_capture(recording, event):
+    wait, event = normalize_readiness(event, recording.steps[-1])
+    if wait is not None:
+        recording.accept(wait)
+    recording.accept(event)
 
 
 @unittest.skipUnless(os.getenv("NEXER_RUN_RECORDER_E2E") == "1", "Set NEXER_RUN_RECORDER_E2E=1 for synthetic Edge recording")
@@ -28,7 +34,7 @@ class EdgeCaptureTests(unittest.TestCase):
                 page.expose_binding('nexerStartRecording', start)
                 page.set_content('<label>Login metadata canary<input id="company"></label><input type="password"><button id="login">Login</button>')
                 page.evaluate('window.__nexerRecorderActive = false')
-                page.evaluate(CAPTURE.read_text(encoding='utf-8'))
+                page.evaluate(recorder_script())
                 page.locator('#company').fill('preparation-canary')
                 page.locator('input[type=password]').fill('password-canary')
                 page.locator('#login').click()
@@ -55,9 +61,9 @@ class EdgeCaptureTests(unittest.TestCase):
             browser = playwright.chromium.launch(channel='msedge', headless=True)
             try:
                 page = browser.new_page()
-                page.expose_binding('nexerCapture', lambda source, event: recording.accept(event))
+                page.expose_binding('nexerCapture', lambda source, event: accept_capture(recording, event))
                 page.set_content('<ul><li>Relatorio_2026.csv<a download href="data:text/plain,test">Baixar</a></li></ul>')
-                page.evaluate(CAPTURE.read_text(encoding='utf-8'))
+                page.evaluate(recorder_script())
                 page.locator('a').click()
                 page.wait_for_timeout(100)
                 collection = recording.recipe()['steps'][-1]['collection']
@@ -96,12 +102,12 @@ class EdgeCaptureTests(unittest.TestCase):
             browser = playwright.chromium.launch(channel="msedge", headless=True)
             try:
                 page = browser.new_page()
-                page.expose_binding("nexerCapture", lambda source, event: recording.accept(event))
+                page.expose_binding("nexerCapture", lambda source, event: accept_capture(recording, event))
                 page.expose_binding("nexerFinishRecording", lambda source: stopped.append(True))
                 page.set_content('''<label>Data inicial <input type="date"></label>
                     <label for="company">Empresa</label><input id="company">
                     <table><tbody><tr><td>Recorded-file-canary.xlsx</td><td><a download href="data:text/plain,file">Baixar</a></td></tr></tbody></table>''')
-                page.evaluate(CAPTURE.read_text(encoding="utf-8"))
+                page.evaluate(recorder_script())
                 self.assertEqual(set(recording.variables), {"base_url"})
                 page.locator('input[type="date"]').fill("2031-02-17")
                 page.locator('#company').fill("typed-company-canary")
@@ -133,11 +139,11 @@ class EdgeCaptureTests(unittest.TestCase):
             browser = playwright.chromium.launch(channel="msedge", headless=True)
             try:
                 context = browser.new_context()
-                context.expose_binding("nexerCapture", lambda source, event: recording.accept(event))
+                context.expose_binding("nexerCapture", lambda source, event: accept_capture(recording, event))
                 page = context.new_page()
                 page.set_content(html)
                 shadow(page)
-                page.evaluate(CAPTURE.read_text(encoding="utf-8"))
+                page.evaluate(recorder_script())
                 page.locator("#company").fill("shadow-company-canary")
                 page.locator("#counter").dblclick()
                 page.locator("#menu").hover()
@@ -184,7 +190,7 @@ class EdgeCaptureTests(unittest.TestCase):
                 <form><input name="username"><input type="password"><button id="login">Login</button></form>
                 <button id="export">Export</button>
                 </body></html>''')
-            page.evaluate(CAPTURE.read_text(encoding="utf-8"))
+            page.evaluate(recorder_script())
             page.locator("#period_start").fill("2031-02-17")
             page.locator("#period_end").fill("2031-03-29")
             page.locator("#comments").fill("synthetic-text-canary")
@@ -219,14 +225,14 @@ class EdgeCaptureTests(unittest.TestCase):
                     events.append(event)
                     recording.accept({**event, **({"frames": ["iframe"]} if source["frame"].parent_frame else {})})
                 context.expose_binding("nexerCapture", accept)
-                context.add_init_script(path=CAPTURE)
+                context.add_init_script(script=recorder_script())
                 page = context.new_page()
                 page.set_content('''<form onsubmit="event.preventDefault()"><input id="field">
                   <input type="submit"><input type="checkbox"><input type="radio"></form>
                   <iframe srcdoc="<button>Nested</button>"></iframe>''')
                 page.evaluate("delete window.__nexerRecorderInstalled")
                 page.evaluate("delete window.__nexerRecorderDocument")
-                page.evaluate(CAPTURE.read_text(encoding="utf-8"))
+                page.evaluate(recorder_script())
                 page.locator("#field").press("Enter")
                 page.wait_for_timeout(100)
                 self.assertEqual([event["action"] for event in events], ["press"])

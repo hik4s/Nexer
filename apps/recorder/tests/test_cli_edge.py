@@ -120,7 +120,10 @@ class RecorderCliTests(unittest.TestCase):
             with patch.object(recorder, 'sync_playwright', lambda: contextlib.nullcontext(runtime)), patch('sys.argv', ['record_recipe.py', '--url', destination, '--output', str(output)]):
                 recorder.main(on_started=lambda: progress.append('started'))
             recipe = json.loads(output.read_text(encoding='utf-8'))
-            self.assertEqual(len(recipe['steps']), 9)
+            self.assertEqual(len([step for step in recipe['steps'] if step['action'] != 'wait_for']), 9)
+            learned = [step for step in recipe['steps'] if step['action'] == 'wait_for']
+            self.assertEqual([step['state'] for step in learned], ['visible'])
+            self.assertEqual(learned[0]['learning'], {'source': 'automatic', 'confidence': 'high'})
             self.assertEqual([step['index'] for step in recipe['steps'] if step['action'] == 'switch_tab'], [1, 0, 1])
             self.assertEqual(recipe['variables']['company']['label'], 'Preparation metadata')
             self.assertTrue(aborted)

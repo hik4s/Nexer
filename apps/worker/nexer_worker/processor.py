@@ -17,6 +17,7 @@ from credentials import CredentialResolutionError
 class UnavailableCredentialProvider:
     def get(self, reference):
         raise CredentialResolutionError("CREDENTIALS_UNAVAILABLE")
+from download_contract import SAFE_DOWNLOAD_ERRORS
 from context import ExecutionContext
 from runner import RecipeRunner
 
@@ -334,7 +335,7 @@ class WorkerExecutionProcessor:
             self._cancel_item(execution_id, item_id)
             return
         now = self._now()
-        detail = "AUTOMATION_FAILED"  # Raw runtime/browser exceptions may contain credentials.
+        detail = error_detail if error_detail in SAFE_DOWNLOAD_ERRORS else "AUTOMATION_FAILED"
         self._update_item(
             item_id,
             status=ExecutionAutomationStatus.FAILED.value,

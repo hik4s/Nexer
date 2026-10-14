@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from "vitest";
-import {render, screen, waitFor} from "@testing-library/react";
+import {render, screen, waitFor, fireEvent} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {MemoryRouter} from "react-router-dom";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
@@ -7,6 +7,32 @@ import {NewFlowPage, recordingFailureMessage} from "./NewFlowPage";
 import {api} from "../lib/api";
 vi.mock("../lib/api", () => ({api: {listLoginProfiles: vi.fn(async () => ({items: []})), startFlowRecording: vi.fn(), getFlowRecording: vi.fn(), cancelFlowRecording: vi.fn(), createAutomation: vi.fn(), createAutomationVersion: vi.fn(), testAutomationVersion: vi.fn(), publishAutomationVersion: vi.fn()}}));
 describe("Guided registration", () => {
+  it("publishes a request correlation and blocks unapplied configuration", async () => {
+    vi.mocked(api.createAutomation).mockResolvedValue({id:22} as Awaited<ReturnType<typeof api.createAutomation>>);
+    vi.mocked(api.createAutomationVersion).mockResolvedValue({version:1} as Awaited<ReturnType<typeof api.createAutomationVersion>>);
+    render(<MemoryRouter><QueryClientProvider client={new QueryClient()}><NewFlowPage /></QueryClientProvider></MemoryRouter>);
+    const user=userEvent.setup();
+    await user.type(screen.getByLabelText('Nome do fluxo'),'Batch');
+    await user.type(screen.getByLabelText('Endereço do site'),'http://127.0.0.1/form');
+    await user.click(screen.getByText('Continuar'));await user.click(screen.getByText('Continuar'));
+    const file=new File(['{}'],'recipe.json',{type:'application/json'});
+    Object.defineProperty(file,'text',{value:async()=>JSON.stringify({schema_version:1,variables:{},steps:[{id:'generate',action:'click',selector:'#export'},{id:'get',action:'download',selector:'a',filename:'report',collection:{rows:'#table tr',name:'.name',button:'a',pattern:'Report-*.csv'}}]})});
+    await user.upload(screen.getByLabelText('Importar receita JSON'),file);
+    await user.click(screen.getByText('Continuar'));
+    await user.click(screen.getByText('Central de download · get'));
+    fireEvent.change(screen.getByLabelText('Ação que gera o relatório'),{target:{value:'generate'}});
+    expect(screen.getByText('Continuar')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Contêiner da central'),{target:{value:'#table'}});
+    fireEvent.change(screen.getByLabelText('Seletor da confirmação'),{target:{value:'#confirmation'}});
+    await user.click(screen.getByText('Aplicar vínculo'));
+    await user.click(screen.getByText('Continuar'));
+    await user.click(screen.getByText('Validar e publicar fluxo'));
+    await waitFor(()=>expect(api.createAutomationVersion).toHaveBeenCalled());
+    const submitted=vi.mocked(api.createAutomationVersion).mock.lastCall?.[1] as {steps:Record<string,unknown>[]};
+    expect(submitted.steps.map(s=>s.action)).toEqual(['navigate','snapshot_downloads','request_download','download']);
+    expect(submitted.steps[3].generation).toBe('generate');
+    vi.clearAllMocks();
+  });
   it("reports safe, actionable recording failure reasons without exposing private values", () => {
     expect(recordingFailureMessage("RECORDER_EMPTY")).toContain("Nenhuma ação");
     expect(recordingFailureMessage("RECORDER_BROWSER_FAILED")).toContain("Edge");

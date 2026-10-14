@@ -2,6 +2,7 @@ import hashlib
 from fnmatch import fnmatchcase
 import re
 import time
+from download_generation import snapshot_downloads, request_download, correlated_download
 from pathlib import Path, PurePath
 
 
@@ -35,6 +36,8 @@ def create_default_registry() -> ActionRegistry:
     registry.register("wait_for", _wait_for)
     registry.register("wait_for_any", _wait_for_any)
     registry.register("switch_tab", _switch_tab)
+    registry.register("snapshot_downloads", snapshot_downloads)
+    registry.register("request_download", request_download)
     registry.register("download", _download)
     registry.register("validate_file", _validate_file)
     registry.register("check", _check)
@@ -319,25 +322,28 @@ def _download(step, context):
         raise ActionExecutionError("DOWNLOAD_API_UNAVAILABLE")
 
     target = context.downloads_dir / safe_name
-    locator = _locator(step, context)
-    if "collection" in step:
-        collection = {key: context.resolve(value) for key, value in step["collection"].items()}
-        pattern = collection["pattern"]
-        if not isinstance(pattern, str) or not pattern.strip() or len(pattern) > 2048:
-            raise ActionExecutionError("DOWNLOAD_PATTERN_INVALID")
-        deadline = time.monotonic() + step.get("timeout_ms", 30000) / 1000
-        while True:
-            if context.is_cancellation_requested():
-                raise ActionExecutionError("EXECUTION_CANCELLED")
-            locator = _matching_download(_scope(step, context), collection, pattern)
-            if locator is not None:
-                break
-            if time.monotonic() >= deadline:
-                raise ActionExecutionError("DOWNLOAD_MATCH_NOT_FOUND")
-            context.page.wait_for_timeout(250)
-    with context.page.expect_download(timeout=step.get("timeout_ms", 30000)) as download_info:
-        locator.click(timeout=step.get("click_timeout_ms", 30000))
-    download = download_info.value
+    if "generation" in step:
+        download = correlated_download(step, context)
+    else:
+        locator = _locator(step, context)
+        if "collection" in step:
+            collection = {key: context.resolve(value) for key, value in step["collection"].items()}
+            pattern = collection["pattern"]
+            if not isinstance(pattern, str) or not pattern.strip() or len(pattern) > 2048:
+                raise ActionExecutionError("DOWNLOAD_PATTERN_INVALID")
+            deadline = time.monotonic() + step.get("timeout_ms", 30000) / 1000
+            while True:
+                if context.is_cancellation_requested():
+                    raise ActionExecutionError("EXECUTION_CANCELLED")
+                locator = _matching_download(_scope(step, context), collection, pattern)
+                if locator is not None:
+                    break
+                if time.monotonic() >= deadline:
+                    raise ActionExecutionError("DOWNLOAD_MATCH_NOT_FOUND")
+                context.page.wait_for_timeout(250)
+        with context.page.expect_download(timeout=step.get("timeout_ms", 30000)) as download_info:
+            locator.click(timeout=step.get("click_timeout_ms", 30000))
+        download = download_info.value
     if step.get("preserve_filename"):
         target = context.downloads_dir / _safe_filename(download.suggested_filename)
         if target.exists():

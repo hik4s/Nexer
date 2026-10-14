@@ -1,5 +1,21 @@
 # Gravador Nexer — ações e parâmetros de execução
 
+## Inteligência local — primeira entrega de estabilidade
+
+O gravador agora instala um conjunto ordenado de scripts: identificação estrutural, observação de prontidão e captura. A CLI e os testes Edge usam o mesmo conjunto, definido em `nexer_recorder/scripts.py`.
+
+Os alvos preferem identificadores estruturais permitidos e únicos, atributos de função dos controles e ancoragem em ancestrais. IDs, `data-testid` e `name` automáticos usam apenas vocabulário limitado de funções de interface, como `search`, `run`, `report`, `download` e `period_start`. Identificadores arbitrários, números de registros, hashes, textos, URLs e valores de controles não são promovidos a seletores. Quando necessário, permanece o fallback posicional, que exige revisão e pode quebrar após mudanças de layout. Ambiguidades detectadas entre árvores DOM e shadow DOM impedem exportar uma ação insegura.
+
+Botões em coleções são identificados relativamente à linha, preservando a busca por padrão em outras linhas. Isso não altera a seleção da primeira correspondência nem comprova que o arquivo pertence à consulta atual.
+
+Durante a gravação ativa, o observador reconhece controles que aparecem ou ficam habilitados depois de uma ação no mesmo documento, na mesma geração e dentro de 30 segundos. Essas transições geram esperas `visible` ou `enabled` com origem automática e confiança alta. A confiança significa que uma mudança estrutural foi observada; não comprova causalidade, consulta concluída ou significado de negócio. As condições continuam revisáveis na UI.
+
+Preparação de login, pausa, perda de foco, reinstalação e inicializações atrasadas invalidam observações anteriores. O trabalho por lote é limitado a 200 registros de mutação, 250 controles e 1000 elementos percorridos. Um lote excedido não gera inferência; o observador refaz uma baseline limitada para que novas ações possam aprender nos controles amostrados. Campos e contextos sensíveis permanecem excluídos.
+
+Esperas estruturais observadas podem ser registradas mesmo sem `--smart-waits`. A flag acrescenta as sugestões genéricas de confiança média do otimizador. Esperas manuais anteriores têm precedência, e coleções não recebem uma espera no botão da linha original.
+
+Este incremento opera localmente, sem modelo de linguagem ou API externa. Downloads demorados, resultados novos, ausência de dados, recursos de outras origens e novos componentes especiais continuam como próximas entregas.
+
 Grava locais das ações no Edge e gera um rascunho de receita v1. Lê rótulos estruturais dos campos para nomeá-los; não lê nem envia valores preenchidos, opção selecionada, nomes/conteúdo de arquivos gravados, cookies, screenshots ou conteúdo de requests. O coletor Python rejeita eventos com `value` ou campos fora do contrato. Formulários com senha e campos identificados como autenticação/segredo são ignorados.
 
 Exemplo: preencher o input `period_start` gera `fill` no seletor `#period_start`, com `value: "{{period_start}}"` e declaração obrigatória do parâmetro. Nenhuma data da gravação é guardada. O runtime recebe a data nova na execução.

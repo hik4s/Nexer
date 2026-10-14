@@ -1,5 +1,19 @@
 # Gravador inteligente — primeira versão integrada
 
+## Continuação: inteligência local e estabilidade estrutural
+
+Implementação na branch `codex/smart-recorder-foundation`, baseada em `a414983` da branch `feat/nexer-smart-recorder`.
+
+- Novo `selectors.js`: política restrita de identificadores estruturais, atributos de função, unicidade com ascendência por shadow host, ancoragem e fallback posicional. Seletores ambíguos detectados são recusados. Coleções obtêm botão relativo à linha.
+- `intelligence.js` integrado ao caminho real: uma geração por ação, transições de visibilidade/habilitação, janela de 30 segundos, controles em shadow DOM aberto, invalidação imediata em pausa, reset em perda de foco e orçamento conservador de observação.
+- Novo `readiness.py`: contrato estrito de `readiness={state: visible|enabled}`, normalização sem mutar argumentos, condição automática de 30 segundos/confiança alta, precedência manual e supressão para coleções.
+- Novo `scripts.py`: bundle ordenado único consumido pela CLI e fixtures. Respostas de inicialização obsoletas não reinstalam captura nem alteram o estado de gravação atual.
+- Os novos testes reproduzem a fragilidade anterior, gravam/exportam/reproduzem com parâmetros novos, alteração de layout e atraso diferente, e verificam ausência de canários.
+
+Revisão independente identificou ambiguidade em seletores posicionais cruzando shadow roots e invalidade de observações após pausa sem mutação. Ambos foram reproduzidos antes das correções. A recuperação de baseline após orçamento excedido foi incluída por ser requisito da especificação.
+
+Verificação final nesta sessão: **54 testes do gravador com Edge sintético, 18 regressões selecionadas do runtime e 6 testes do protocolo backend, todos OK/exit 0**. Sintaxe JavaScript e diff-check passaram. Nenhum acesso corporativo ou serviço real iniciado. Detalhes no ledger do plano; os resultados abaixo são históricos da versão anterior.
+
 ## Implementado
 - `apps/recorder/nexer_recorder/smart_waits.py`: otimizador determinístico idempotente de receitas validadas; insere `wait_for visible` antes de cliques e ações em controles e `wait_for enabled` antes de downloads individuais; marca `learning.source=automatic, confidence=medium`. Não duplica esperas manuais, preserva iframes, nomes e parâmetros; não modifica valores de campos. Para `download.collection`, preserva polling existente do executor sem introduzir uma espera que pode mirar em linha antiga.
 - `apps/recorder/nexer_recorder/capture.js`: observador de mudanças estruturais `disabled` e `aria-disabled`; após transição de desabilitado para habilitado, marca clique/download dentro de 90 s com `readiness=enabled`. Sem capturar valores de inputs ou conteúdo de rede. Já existia na toolbar do Edge recurso manual `Marcar espera` com estados visible/enabled/hidden/disabled, preservado.
