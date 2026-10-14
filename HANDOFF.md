@@ -4,6 +4,8 @@ Atualizado em 14/10/2026. Este é o ponto de entrada da continuação. Leia ante
 
 **Continuação mais recente:** o contrato de consultas com resultado correlacionado foi implementado neste mesmo worktree/branch. Leia a seção 12 e `docs/2026-10-14-query-outcomes.md`; a prioridade de desenhar esse contrato, descrita abaixo, já foi atendida. Não reimplementar as quatro tarefas do plano.
 
+**Avanço posterior:** revisão e reparo de alvos na etapa Campos implementados; veja seção 13 e `docs/2026-10-14-step-review.md`. Não recomeçar essa implementação.
+
 ## 1. Objetivo e decisões do usuário
 
 Construir um gravador inteligente, estável e versátil para tarefas comuns, sites dinâmicos e ambientes empresariais. O usuário demonstra um fluxo; o Nexer interpreta ações e transições verificáveis, gera uma receita parametrizada e permite reproduzi-la com entradas diferentes.
@@ -174,7 +176,7 @@ Não habilitar testes corporativos reais ou iniciar workers/API/migrations em ba
 5. Código e testes nas áreas citadas, README de recorder/runtime/worker/backend/frontend.
 6. [Handoff anterior preservado](docs/archive/HANDOFF-before-consolidation-2026-10-14.md), `HANDOFF_NEXER_NEXT_CHAT.md`, `NEXER_WORK_HANDOFF_2026-10-09.md` e roadmaps apenas para recuperar histórico. Se houver divergência operacional, validar código/estado atual antes de agir.
 
-Para retomar: “Leia HANDOFF.md, especialmente a seção 12, e o relatório docs/2026-10-14-query-outcomes.md. O contrato de consultas já está implementado e testado. Confira branch/status e escolha o próximo avanço por evidência real do portal ou revisão guiada, preservando os limites SGIND.”
+Para retomar: “Leia HANDOFF.md, especialmente as seções 12 e 13, e os relatórios docs/2026-10-14-query-outcomes.md e docs/2026-10-14-step-review.md. O contrato de consultas já está implementado e testado. Confira branch/status e escolha o próximo avanço por evidência real do portal ou revisão guiada, preservando os limites SGIND.”
 
 ## 12. Continuação — consultas correlacionadas
 
@@ -189,3 +191,15 @@ Verificação após correções da revisão: runtime161/151pass/10skip, recorder
 O protocolo depende de um ID novo e não reutilizado fornecido pela aplicação e ligado à ação atual. Marcador global compartilhado não basta. Site deve declarar os estados terminais corretamente. Sem comprovação SGIND/IQOS, shadow DOM, navegação completa durante query, ramificação ou retomada. Não tratar testes sintéticos como aprovação corporativa.
 
 Próximo escopo a escolher: inspecionar evidência real de confirmação de consulta/download no portal autorizado; ou reduzir configuração técnica na revisão por adaptadores/reparo pontual. Preservar método B e limites de dados/instalação. A feature genérica de consulta já existe; revisar os commits e relatório antes de começar qualquer nova implementação.
+
+## 13. Continuação — revisão e reparo pontual
+
+O usuário escolheu explicitamente “Revisar e corrigir etapas sem regravar tudo”. Implementado sobre `54004be`, no mesmo worktree/branch, com autorização ampla de execução já concedida. Ampliação delimitada da revisão existente, sem novo schema/backend/runtime.
+
+A etapa Campos agora apresenta ações em ordem, parâmetro associado e aba/quantidade de frames. É possível corrigir seletor de alvo e destino de arrastar, mantendo IDs, ordem, frames e parâmetros. Espera automática imediatamente anterior, com mesmo seletor/frame, pode acompanhar a correção e passa a manual. Configuração inalterada não muda metadados. Downloads em coleção continuam especializados.
+
+Rascunhos de correção não se perdem ao remover esperas anteriores ou sincronizar outra etapa. Pendências por editor impedem sair da revisão até aplicar/descartar. O alvo corrigido sobrevive à restauração de consulta para clique. Importação rejeita IDs inválidos/duplicados antes de renderizar. Os três achados da revisão independente foram reproduzidos em RED e corrigidos. Depois das correções passaram 101 testes frontend em 28 arquivos, tsc-b e Vite. QA visual Edge 1280/390 e replay de receita reparada pela UI passaram; original falhou no alvo antigo e corrigida concluiu as quatro etapas. Não foram repetidas suítes Python sem mudanças de produção nessas camadas. Evidências finais em docs/2026-10-14-step-review.md e temp/step-review/.
+
+Limites: reparo por seletor, sem picker visual; frames/tipo/ordem não editados aqui; sem persistência do rascunho após reload; sem alteração da validação SGIND. A validação de formato do seletor na UI não comprova alvo único nem resultado de negócio.
+
+Próximo avanço ainda não implementado: seleção visual assistida para o reparo, preservação de gravação incompleta após componente não suportado, ou inspeção autorizada do portal real. Revisar o relatório antes de escolher; não repetir as entregas de consultas ou revisão.

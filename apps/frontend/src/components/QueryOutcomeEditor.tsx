@@ -14,7 +14,7 @@ export function QueryOutcomeEditor({recipe,stepId,originalStep,onChange,onDirty}
     catch{onDirty(true);setError('Revise a confirmação, os estados e o prazo. Nenhuma alteração foi aplicada.');}}
   function remove(){try{
     const updated=removeQuery(recipe,stepId);
-    if(original.current) updated.steps=updated.steps.map(s=>s.id===stepId?structuredClone(original.current!):s);
+    if(original.current) updated.steps=updated.steps.map(s=>s.id===stepId?{...structuredClone(original.current!),selector:step.selector}:s);
     onChange(updated);setConfig(queryConfig(updated.steps.find(s=>s.id===stepId)!));onDirty(false);setError('');
   }catch{setError('Não foi possível restaurar o clique.');}}
   const fields:[keyof QueryOutcomeConfig,string][]=[['confirmationSelector','Confirmação da consulta'],['container','Contêiner do resultado'],['dataSelector','Estado com dados'],['emptySelector','Estado sem dados'],['errorSelector','Estado de erro']];

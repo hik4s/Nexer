@@ -541,3 +541,7 @@ A revisão do fluxo permite vincular um download à confirmação de sua solicit
 ### Consultas com resultado verificável
 
 A revisão também permite converter um clique em consulta com confirmação de dados, ausência de dados ou erro. O resultado deve apresentar a identificação da solicitação atual; dados antigos não são aceitos. Veja [configuração, testes e limites](docs/2026-10-14-query-outcomes.md). A primeira versão exige metadado verificável fornecido pelo site/adaptador.
+
+### Revisão e reparo de etapas
+
+Após gravar ou importar um fluxo, a etapa Campos mostra a sequência de ações e permite corrigir o alvo de uma etapa sem regravar o restante. Esperas automáticas associadas podem acompanhar a correção; edições pendentes são preservadas até aplicar ou descartar. Veja [uso, evidências e limites](docs/2026-10-14-step-review.md).

@@ -276,6 +276,19 @@ h2 {
 
 .download-generation-editor, .query-outcome-editor { display: grid; gap: 14px; min-width: 0; margin-top: 18px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; }
 .download-generation-editor legend, .query-outcome-editor legend { padding: 0 6px; font-weight: 600; }
+.step-review { margin: 20px 0 28px; }
+.step-review-list { list-style: none; padding: 0; margin: 16px 0; }
+.step-review-list > li { min-width: 0; border-bottom: 1px solid var(--line); }
+.step-review-list details { margin-top: 0; }
+.step-review-list summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.step-review-list summary::before { content: '▸'; }
+.step-review-list details[open] > summary::before { content: '▾'; }
+.step-review-context { color: #71717a; font-size: 12px; }
+.step-review-parameter { overflow-wrap: anywhere; }
+.step-target-editor { display: grid; gap: 14px; min-width: 0; margin: 0 0 16px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; }
+.step-target-editor legend { padding: 0 6px; font-weight: 600; }
+.form-card .step-review-checkbox { display: flex; align-items: flex-start; gap: 8px; line-height: 1.6; }
+.form-card .step-review-checkbox input { width: 16px; height: 16px; padding: 0; flex: none; margin-top: 2px; }
 .form-card .download-generation-shared { display: flex; align-items: center; gap: 8px; }
 .form-card .download-generation-shared input { width: 16px; height: 16px; padding: 0; flex: none; }
 
