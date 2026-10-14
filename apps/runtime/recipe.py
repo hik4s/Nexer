@@ -2,6 +2,7 @@ import re
 from copy import deepcopy
 from field_schema import validate_field
 from download_contract import validate_generation_steps, validate_collection
+from query_contract import validate_query_step
 
 
 KNOWN_ACTIONS = {
@@ -16,7 +17,7 @@ KNOWN_ACTIONS = {
     "download",
     "validate_file",
     "check", "set_value", "choose", "choose_radio", "scroll", "hover", "drag", "close_tab",
-    "snapshot_downloads", "request_download",
+    "snapshot_downloads", "request_download", "query",
 }
 
 _VARIABLE_PATTERN = re.compile(r"{{\s*([A-Za-z_][A-Za-z0-9_]*)\s*}}")
@@ -183,6 +184,12 @@ def _validate_retry(step: dict) -> None:
 
 
 def _validate_step_requirements(action: str, step: dict) -> None:
+    if action == 'query':
+        try:
+            validate_query_step(step)
+        except ValueError as exc:
+            raise RecipeValidationError(str(exc)) from None
+        return
     frames = step.get("frames", [])
     if not isinstance(frames, list) or len(frames) > 16 or any(not isinstance(item, str) or not item.strip() for item in frames):
         raise RecipeValidationError("FRAME_SELECTORS_INVALID")

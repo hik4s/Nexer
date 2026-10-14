@@ -68,7 +68,7 @@ def validate_generation_steps(steps: list[dict]) -> None:
             validate_collection(step.get('collection'), extended=True)
             if step['collection'] != baseline['collection']:
                 raise ValueError('DOWNLOAD_GENERATION_REFERENCE_INVALID')
-        elif 'generation' in step or 'baseline' in step or 'confirmation' in step:
+        elif 'generation' in step or 'baseline' in step or ('confirmation' in step and action != 'query'):
             raise ValueError('DOWNLOAD_GENERATION_CONFIG_INVALID')
         if action == 'download' and 'collection' in step and 'generation' not in step:
             validate_collection(step['collection'], extended='shared' in step['collection'])
