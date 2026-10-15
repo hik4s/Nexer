@@ -1,4 +1,5 @@
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -9,6 +10,17 @@ from main import build_worker
 
 
 class WorkerAppBootstrapTests(unittest.TestCase):
+    def test_worker_uses_the_same_dotenv_download_directory_as_api_settings(self):
+        from app.config import Settings
+        with tempfile.TemporaryDirectory() as directory:
+            dotenv = Path(directory) / '.env'
+            destination = Path(directory) / 'configured-downloads'
+            dotenv.write_text('NEXER_DOWNLOADS_ROOT=' + destination.as_posix(), encoding='utf-8')
+            settings = Settings(_env_file=dotenv)
+            with patch('main.get_settings',return_value=settings,create=True):
+                app = build_worker(browser_manager=Mock())
+            self.assertEqual(app.loop.processor.downloads_root, destination)
+
     def test_build_worker_starts_browser_and_page_factory_uses_execution_workspace(self):
         browser = Mock()
         page = object()

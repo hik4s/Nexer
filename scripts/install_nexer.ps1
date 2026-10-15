@@ -2,12 +2,17 @@
 [CmdletBinding()]
 param(
     [switch]$NoLaunch,
+    # Compatibilidade com verificacoes antigas: agora equivale a -NoLaunch.
     [switch]$SkipAuthSetup,
     [switch]$SkipDependencies,
     [switch]$UpgradeExistingDatabase
 )
 
 $ErrorActionPreference = 'Stop'
+if ($SkipAuthSetup) {
+    Write-Warning '-SkipAuthSetup obsoleto: use -NoLaunch. O acesso atual usa codigo de pareamento.'
+    $NoLaunch = $true
+}
 $root = Split-Path -Parent $PSScriptRoot
 $frontend = Join-Path $root 'apps\frontend'
 $venv = Join-Path $root '.venv'
@@ -41,7 +46,7 @@ try {
     }
 
     foreach ($relative in @(
-        'scripts\run_local.py', 'scripts\setup_auth.py',
+        'scripts\run_local.py',
         'scripts\open_nexer.ps1', 'apps\worker\requirements.txt',
         'apps\frontend\package.json', 'apps\frontend\package-lock.json',
         'apps\backend\alembic.ini', 'apps\backend\alembic\env.py',
@@ -112,24 +117,10 @@ try {
         Invoke-Checked $python @('-m', 'alembic', '-c', (Join-Path $root 'apps\backend\alembic.ini'), 'upgrade', 'head')
     } finally { Set-Location $previous }
 
-    Write-Host '[4/5] Credenciais de acesso LOCAL ao Nexer...'
-    if ($SkipAuthSetup) {
-        Write-Host 'Configuracao de usuario omitida (modo de verificacao).'
-    } else {
-        $hasAuth = $false
-        if (Test-Path -LiteralPath $settingsFile) {
-            $lines = Get-Content -LiteralPath $settingsFile
-            $hasAuth = @($lines | Where-Object { $_ -match '^\s*NEXER_AUTH_USERNAME\s*=' }).Count -gt 0 -and
-                       @($lines | Where-Object { $_ -match '^\s*NEXER_AUTH_PASSWORD_HASH\s*=' }).Count -gt 0
-        }
-        if (-not $hasAuth) {
-            Invoke-Checked $python @((Join-Path $root 'scripts\setup_auth.py'))
-        } else { Write-Host 'Usuario local ja configurado; nao sobrescrito.' }
-    }
+    Write-Host '[4/5] Acesso local por codigo de pareamento, emitido ao abrir o Nexer.'
 
     Write-Host '[5/5] Instalacao local concluida.'
     if (-not $NoLaunch) {
-        if ($SkipAuthSetup) { throw 'Nao iniciar o Nexer sem configurar o usuario local.' }
         if ($env:NEXER_ENVIRONMENT -eq 'test') { throw 'NEXER_ENVIRONMENT=test nao permitido para inicializacao normal.' }
         $occupied = @(Get-NetTCPConnection -LocalPort 8000,5173 -State Listen -ErrorAction SilentlyContinue)
         if ($occupied.Count -gt 0) {

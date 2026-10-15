@@ -12,7 +12,9 @@
 
 ## Instalação assistida do zero — recomendada
 
-Na pasta extraída ou clonada, dê duplo clique em **`Instalar-Nexer.cmd`**. O instalador verifica Python 3.12/Node/npm, cria `.venv`, executa `pip install` e `npm ci`, aplica migrações em um banco novo, solicita a criação do usuário LOCAL e, se as portas estiverem livres, abre a interface no navegador.
+Na pasta extraída ou clonada, dê duplo clique em **`Instalar-Nexer.cmd`**. O instalador verifica Python 3.12/Node/npm, cria `.venv`, executa `pip install` e `npm ci`, aplica migrações em um banco novo e, se as portas estiverem livres, abre a interface no navegador. Ao abrir, o Nexer exibe o código de pareamento em uma janela local; digite esse código na tela de acesso. A instalação não solicita criação de usuário ou senha.
+
+Use `-NoLaunch` para instalar sem abrir serviços. A opção antiga `-SkipAuthSetup` é aceita com aviso e equivale a `-NoLaunch`, preservando o uso em verificações sem iniciar o aplicativo.
 
 Ele **não instala Python, Node ou Edge**, não altera um banco existente silenciosamente e **não inicia worker de relatórios**. Se já existir `data/nexer.db`, ele interrompe com orientação; para atualizar uma instalação existente, faça backup e analise antes de usar a opção `-UpgradeExistingDatabase`. Para verificar sem abrir serviços: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\install_nexer.ps1 -NoLaunch`.
 
@@ -31,10 +33,7 @@ Pop-Location
 New-Item -ItemType Directory -Path .\data -Force | Out-Null
 .\.venv\Scripts\python.exe -m alembic -c .\apps\backend\alembic.ini upgrade head
 
-# Cria credenciais de administracao LOCAIS do Nexer (hash, nao senha em claro).
-.\.venv\Scripts\python.exe .\scripts\setup_auth.py
-
-# Abre API e frontend locais para acesso ao dashboard.
+# Abre API e frontend locais e exibe o codigo de pareamento em janela local.
 .\Abrir-Nexer.cmd
 ```
 
@@ -77,12 +76,12 @@ O segundo `git check-ignore` idealmente nao retorna nenhum dos arquivos de proje
 1. Preparacao numa pasta limpa, com `data/nexer.db`, `.venv` e `node_modules` ausentes no ZIP/clone.
 2. `pip install` e `npm ci` com sucesso, sem referencias a caminhos de outra maquina.
 3. Migrations `alembic upgrade head` concluindo em banco novo e `pip check` passando.
-4. Autenticacao local configurada pela instalacao, API `/version` e frontend iniciando no loopback; pareamento sem impressao de segredos nos logs.
+4. API `/version` e frontend iniciando no loopback; código de pareamento exibido na janela local e aceito pela interface, sem gravar o código em logs.
 5. Testes sintéticos e verificacao de inicializacao **sem ativar workers em banco de terceiros**.
 6. Como etapa separada, worker + SGIND real + relatorio CSV exigem homologacao. **Nao considerar esses passos ja aprovados.**
 
 ## Credenciais e separacao entre versoes
 
-A senha de administracao **LOCAL** do Nexer tem hash em `.env` gerado pelo `scripts/setup_auth.py`; nao eh a senha SGIND/IQOS. Credenciais **corporativas** sao informadas na UI em cada execucao e nunca copiadas para `.env`.
+O núcleo atual usa código de pareamento temporário e de uso único para criar a sessão local. `scripts/setup_auth.py` pertence à autenticação legada e não é chamado pelo instalador atual. Configurações antigas em `.env` são preservadas. Credenciais **corporativas** são informadas na UI em cada execução autorizada e nunca copiadas para `.env`.
 
 A documentacao extensa na raiz do README contem uma secao de **Streamlit/EXE legado**. Nao seguir aquelas instrucoes para instalar o nucleo novo. `Nexer.bat` invoca o executavel legado; para React/FastAPI use `Abrir-Nexer.cmd`.

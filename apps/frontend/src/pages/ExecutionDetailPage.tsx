@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useExecutionEvents } from "../hooks/useExecutionEvents";
 import { api } from "../lib/api";
+import { ExecutionArtifacts } from "../components/ExecutionArtifacts";
 
 const labels: Record<string, string> = {
   QUEUED: "Na fila",
@@ -99,6 +100,7 @@ export function ExecutionDetailPage() {
       </div>
 
       <div className="grid">
+        <ExecutionArtifacts key={current.id} executionId={current.id} status={current.status} />
         <section className="card">
           <p className="eyebrow">Automações</p>
           <div className="execution-items">

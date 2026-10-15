@@ -7,7 +7,8 @@ from sqlalchemy import select
 from login_profiles import profile_key, authenticate_profile, LoginExecutionGuard
 
 from app.enums import ExecutionAutomationStatus, ExecutionStage, ExecutionStatus
-from app.models import Automation, AutomationVersion, Checkpoint, Event, Execution, ExecutionAutomation
+from app.models import Artifact, Automation, AutomationVersion, Checkpoint, Event, Execution, ExecutionAutomation
+from app.services.execution_artifacts import collect_artifacts
 from auth_guard import build_auth_guard
 from corporate_auth import authenticate_corporate, require_validated_adapter
 from corporate_guard import CorporateExecutionGuard, validate_corporate_recipe
@@ -213,15 +214,20 @@ class WorkerExecutionProcessor:
             if result.cancelled:
                 self._cancel_item(execution.id, item.id)
             elif result.failed_step_id is None:
-                self._update_item(
-                    item.id,
-                    status=ExecutionAutomationStatus.SUCCEEDED.value,
-                    stage=ExecutionStage.FINISHED.value,
-                    finished_at=now,
-                    last_progress_at=now,
-                    error_type=None,
-                    error_detail=None,
-                )
+                records = [] if execution.test_mode else collect_artifacts(
+                    context.artifacts, self.downloads_root, execution.id, item.id)
+                if self._execution_cancel_requested(execution.id):
+                    self._cancel_item(execution.id, item.id)
+                    return
+                # Publish metadata and success together: no successful item without its records.
+                with self.session_factory() as db:
+                    stored = db.get(ExecutionAutomation, item.id)
+                    stored.status = ExecutionAutomationStatus.SUCCEEDED.value
+                    stored.stage = ExecutionStage.FINISHED.value
+                    stored.finished_at = stored.last_progress_at = now
+                    stored.error_type = stored.error_detail = None
+                    db.add_all(Artifact(execution_automation_id=item.id, **record) for record in records)
+                    db.commit()
                 self._emit(
                     execution.id,
                     item.id,
@@ -336,7 +342,7 @@ class WorkerExecutionProcessor:
             self._cancel_item(execution_id, item_id)
             return
         now = self._now()
-        detail = error_detail if error_detail in SAFE_DOWNLOAD_ERRORS | SAFE_QUERY_ERRORS else "AUTOMATION_FAILED"
+        detail = error_detail if error_detail in SAFE_DOWNLOAD_ERRORS | SAFE_QUERY_ERRORS | {"ARTIFACT_NOT_VALIDATED", "ARTIFACT_UNAVAILABLE"} else "AUTOMATION_FAILED"
         self._update_item(
             item_id,
             status=ExecutionAutomationStatus.FAILED.value,

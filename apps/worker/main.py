@@ -7,6 +7,7 @@ from pathlib import Path
 from threading import Event
 
 from app.database import SessionLocal
+from app.config import get_settings
 from browser_manager import BrowserManager
 from nexer_worker.loop import WorkerLoop
 from nexer_worker.processor import WorkerExecutionProcessor
@@ -23,9 +24,7 @@ def build_worker(*, browser_manager: BrowserManager | None = None, worker_id=Non
                  stop_event=None) -> WorkerApp:
     worker_id = worker_id or os.getenv("NEXER_WORKER_ID") or f"worker-{os.getpid()}"
     concurrency = int(os.getenv("NEXER_WORKER_CONCURRENCY", "1"))
-    downloads_root = Path(
-        os.getenv("NEXER_DOWNLOADS_ROOT", "./downloads")
-    )
+    downloads_root = Path(get_settings().downloads_root)
     headless = _env_bool("NEXER_BROWSER_HEADLESS", default=True)
 
     manager = browser_manager or BrowserManager(

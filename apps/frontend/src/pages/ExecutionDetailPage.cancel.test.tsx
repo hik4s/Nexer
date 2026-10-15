@@ -11,6 +11,7 @@ vi.mock("../lib/api", () => ({
   api: {
     getExecution: vi.fn(),
     cancelExecution: vi.fn(),
+    listExecutionArtifacts: vi.fn(async()=>({items:[]})),
   },
   executionEventsUrl: vi.fn(() => "http://example.test/events"),
 }));
@@ -58,6 +59,13 @@ const queued = {
 };
 
 describe("ExecutionDetailPage cancellation", () => {
+  it('explains a missing file validation as a repairable recipe problem',async()=>{
+    vi.mocked(api.getExecution).mockResolvedValue({...queued,status:'FAILED',items:[
+      {id:1,automation_id:11,automation_version:1,status:'FAILED',stage:'FAILED',error_detail:'ARTIFACT_NOT_VALIDATED'},
+    ]} as Awaited<ReturnType<typeof api.getExecution>>);
+    renderPage();
+    expect(await screen.findByText('O download precisa de uma etapa de verificação de arquivo antes de concluir. Revise o fluxo no Studio.')).toBeInTheDocument();
+  });
   it('explains an empty query without echoing site content', async()=>{
     vi.mocked(api.getExecution).mockResolvedValue({...queued,status:'FAILED',items:[
       {id:1,automation_id:11,automation_version:1,status:'FAILED',stage:'FAILED',error_detail:'QUERY_NO_DATA'},

@@ -1,6 +1,7 @@
 """Launch orchestration tests with mocked HTTP/process boundaries; no services."""
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 import unittest
 
@@ -42,6 +43,15 @@ if ($script:reuse) {
 Write-Output 'ORCHESTRATION_OK'
 '''.replace("REUSE", "$true" if reuse else "$false").replace("LAUNCHER", launcher)
         with tempfile.TemporaryDirectory() as directory:
+            # Model installed files without depending on this checkout's node_modules.
+            sandbox = Path(directory)
+            copied_launcher = sandbox / 'scripts/open_nexer.ps1'
+            copied_launcher.parent.mkdir()
+            shutil.copyfile(ROOT / 'scripts/open_nexer.ps1', copied_launcher)
+            vite = sandbox / 'apps/frontend/node_modules/vite/bin/vite.js'
+            vite.parent.mkdir(parents=True)
+            vite.touch()
+            harness = harness.replace(launcher, str(copied_launcher).replace("'", "''"))
             script = Path(directory) / "harness.ps1"
             script.write_text(harness, encoding="utf-8-sig")
             result = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)], capture_output=True, text=True, timeout=20)

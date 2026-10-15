@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.auth import router as auth_router
+from app.api.artifacts import router as artifacts_router
 from app.api.login_profiles import router as login_profiles_router
 from app.api.workspace import router as workspace_router
 from app.api.execution_batches import router as execution_batches_router
@@ -191,6 +192,7 @@ app.include_router(execution_batches_router)
 app.include_router(worker_credentials_router)
 app.include_router(automations_router)
 app.include_router(executions_router)
+app.include_router(artifacts_router)
 app.include_router(events_router)
 app.include_router(diagnostics_router)
 app.include_router(automation_versions_router)

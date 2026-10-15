@@ -1,5 +1,7 @@
 # NEXER — HANDOFF MASTER: transição para RPA de propósito geral
 
+> Continuação em 15/10/2026: ler primeiro [estabilidade e arquivos no histórico](2026-10-15-stability-artifacts.md), incluindo mudança de validação de downloads, evidências E2E e limitações. O texto abaixo preserva a fotografia histórica de 14/10.
+
 **Data de consolidação:** 14/10/2026  
 **Natureza:** visão de produto + decisões + inventário de implementação + microtarefas + plano de transição + instruções de continuidade.  
 **Destino:** próximo chat (GPT para planejamento ou modelo de código), Codex CLI, VS Code/Copilot ou agente autorizado.  

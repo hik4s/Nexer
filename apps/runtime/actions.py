@@ -375,13 +375,14 @@ def _validate_file(step, context):
     if extensions and path.suffix.lower() not in extensions:
         raise ActionExecutionError("FILE_EXTENSION_NOT_ALLOWED")
 
-    checksum = None
-    if step.get("checksum") or step.get("calculate_checksum"):
-        digest = hashlib.sha256()
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                digest.update(chunk)
-        checksum = digest.hexdigest()
+    # Bind validation to these bytes even when the recipe does not supply a digest.
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            if context.is_cancellation_requested():
+                raise ActionExecutionError("EXECUTION_CANCELLED")
+            digest.update(chunk)
+    checksum = digest.hexdigest()
 
     if step.get("checksum") and checksum != step["checksum"]:
         raise ActionExecutionError("FILE_CHECKSUM_MISMATCH")

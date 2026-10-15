@@ -1,6 +1,8 @@
 import {downloadErrorMessage} from './downloadGeneration';
 export function executionErrorMessage(code:string|null):string {
   const messages:Record<string,string>={
+    ARTIFACT_NOT_VALIDATED:'O download precisa de uma etapa de verificação de arquivo antes de concluir. Revise o fluxo no Studio.',
+    ARTIFACT_UNAVAILABLE:'O arquivo está indisponível ou foi alterado após a verificação. Revise o arquivo local antes de executar novamente.',
     QUERY_BASELINE_UNAVAILABLE:'Não foi possível identificar a confirmação e o resultado anteriores à consulta.',
     QUERY_IDENTITY_INVALID:'O site não apresentou uma identificação válida da consulta.',
     QUERY_CONFIRMATION_TIMEOUT:'Uma nova consulta não foi confirmada no prazo. A ação não será repetida automaticamente.',

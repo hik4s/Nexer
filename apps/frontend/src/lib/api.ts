@@ -59,6 +59,8 @@ export type Execution = {
   items: ExecutionItem[];
 };
 
+export type ExecutionArtifact = {id: number; execution_automation_id: number; filename: string; size: number; checksum: string};
+
 export type ExecutionListResponse = {
   items: Execution[];
   total: number;
@@ -205,6 +207,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  listExecutionArtifacts: (executionId: number) => request<{items: ExecutionArtifact[]}>(`/executions/${executionId}/artifacts`),
+  downloadExecutionArtifact: async (executionId: number, artifactId: number): Promise<Blob> => {
+    const response = await fetch(`${API_BASE_URL}/executions/${executionId}/artifacts/${artifactId}/download`, {credentials: 'include', cache: 'no-store'});
+    if (!response.ok) throw new Error('ARTIFACT_UNAVAILABLE');
+    return response.blob();
+  },
   getAuthSession: () => request<AuthSession>("/auth/session"),
   requestPairingCode: () => request<{issued: boolean; expires_in: number}>("/auth/pairing-code", {method: "POST"}),
   login: (pairingCode: string) =>

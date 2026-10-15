@@ -17,6 +17,7 @@ from app.models import (
     Execution,
     ExecutionAutomation,
     Checkpoint,
+    Artifact,
 )
 from nexer_worker.processor import WorkerExecutionProcessor
 from runner import RunResult
@@ -135,6 +136,7 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
         db = self.session_factory()
         try:
             for table in (
+                "artifacts",
                 "checkpoints",
                 "events",
                 "execution_automations",
@@ -242,6 +244,66 @@ class WorkerExecutionProcessorTests(unittest.TestCase):
             return execution.id
         finally:
             db.close()
+
+    def test_validated_download_is_persisted_before_success(self):
+        execution_id = self._seed_execution()
+        worker = WorkerService(session_factory=self.session_factory, worker_id='artifact-test', pid=999)
+        worker.register()
+        self.addCleanup(worker.stop)
+        def run(recipe, context):
+            path = context.downloads_dir / 'result.csv'
+            path.write_bytes(b'A,42\n')
+            context.artifacts.extend([{'type':'download','path':str(path)},
+                                      {'type':'validated_file','path':str(path),'size':5}])
+            return RunResult(completed_steps=2, failed_step_id=None)
+        processor = WorkerExecutionProcessor(session_factory=self.session_factory, worker_service=worker,
+            page_factory=lambda *args: FakePage(), downloads_root=Path(self.tmp.name) / 'downloads',
+            runner=Mock(run=run))
+        self.assertEqual(processor.process_once().status, 'SUCCEEDED')
+        with self.session_factory() as db:
+            rows = list(db.scalars(select(Artifact)))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0].filename, 'result.csv')
+            self.assertEqual(rows[0].size, 5)
+            self.assertEqual(len(rows[0].checksum), 64)
+
+    def test_unvalidated_download_cannot_complete_successfully(self):
+        self._seed_execution()
+        worker = WorkerService(session_factory=self.session_factory, worker_id='artifact-test', pid=999)
+        worker.register()
+        self.addCleanup(worker.stop)
+        def run(recipe, context):
+            path = context.downloads_dir / 'unvalidated.csv'; path.write_bytes(b'A,42\n')
+            context.artifacts.append({'type':'download','path':str(path)})
+            return RunResult(completed_steps=1, failed_step_id=None)
+        processor = WorkerExecutionProcessor(session_factory=self.session_factory, worker_service=worker,
+            page_factory=lambda *args: FakePage(), downloads_root=Path(self.tmp.name) / 'downloads',
+            runner=Mock(run=run))
+        self.assertEqual(processor.process_once().status, 'FAILED')
+        with self.session_factory() as db:
+            self.assertEqual(list(db.scalars(select(Artifact))), [])
+
+    def test_cancelled_run_does_not_publish_validated_files(self):
+        self._assert_terminal_run_does_not_publish(cancelled=True)
+
+    def test_failed_run_does_not_publish_validated_files(self):
+        self._assert_terminal_run_does_not_publish(cancelled=False)
+
+    def _assert_terminal_run_does_not_publish(self, *, cancelled):
+        worker = WorkerService(session_factory=self.session_factory,worker_id='artifact-terminal-test',pid=999)
+        worker.register(); self.addCleanup(worker.stop)
+        self._seed_execution()
+        def run(recipe, context):
+            path = context.downloads_dir / 'result.csv'; path.write_bytes(b'A,42\n')
+            context.artifacts.append({'type':'validated_file','path':str(path),'size':5})
+            return RunResult(completed_steps=1,failed_step_id=None if cancelled else 'later',
+                             error=None if cancelled else 'private-canary',cancelled=cancelled)
+        processor = WorkerExecutionProcessor(session_factory=self.session_factory,worker_service=worker,
+            page_factory=lambda *args: FakePage(),downloads_root=Path(self.tmp.name) / 'downloads',
+            runner=Mock(run=run))
+        self.assertEqual(processor.process_once().status,'CANCELLED' if cancelled else 'FAILED')
+        with self.session_factory() as db:
+            self.assertEqual(list(db.scalars(select(Artifact))),[])
 
     def test_test_mode_does_not_open_browser_or_execute_real_actions(self):
         execution_id = self._seed_execution()
