@@ -1,5 +1,5 @@
 import {describe, expect, it} from 'vitest';
-import {repairStep, reviewSteps, hasValidStepIds, type Recipe} from './stepReview';
+import {repairStep, repairOutcomeWait, reviewSteps, hasValidStepIds, type Recipe} from './stepReview';
 
 const recipe:Recipe={variables:{company:{type:'string',label:'Empresa'}},steps:[
   {id:'open',action:'navigate',url:'https://example.invalid'},
@@ -53,5 +53,31 @@ describe('step review',()=>{
     const input={steps:[{id:'drag',action:'drag',selector:'#from',target_selector:'#to',frames:['iframe']}]};
     expect(repairStep(input,'drag',{selector:'#newFrom',targetSelector:'#newTo',syncWait:false}).steps[0]).toEqual({...input.steps[0],selector:'#newFrom',target_selector:'#newTo'});
     expect(()=>repairStep(input,'drag',{selector:'#newFrom',targetSelector:'',syncWait:false})).toThrow();
+  });
+});
+
+describe('reviewable outcome waits',()=>{
+  const sample={steps:[
+    {id:'search',action:'click',selector:'#search'},
+    {id:'wait',action:'wait_for_outcome',after_step_id:'search',ready_selector:'#new',
+     busy_selector:'#busy',ready_state:'enabled',timeout_ms:30000,learning:{source:'automatic',confidence:'high'}},
+    {id:'download',action:'click',selector:'#new'}
+  ]};
+  it('allows a bounded manual edit and preserves the causal action',()=>{
+    const before=structuredClone(sample);
+    const edited=repairOutcomeWait(sample,'wait',{readySelector:'#ready',busySelector:'#busy',
+      readyState:'visible',errorSelector:'#error',timeoutMs:45000});
+    expect(sample).toEqual(before);
+    expect(edited.steps[0]).toEqual(sample.steps[0]);
+    expect(edited.steps[1]).toMatchObject({after_step_id:'search',ready_selector:'#ready',ready_state:'visible',
+      error_selector:'#error',learning:{source:'manual',confidence:'high'}});
+    expect(repairOutcomeWait(sample,'wait',null).steps.map(step=>step.id)).toEqual(['search','download']);
+  });
+  it('rejects unknown selectors, excessive timeout and broken adjacency',()=>{
+    for(const x of [{readySelector:'',busySelector:'#busy',readyState:'enabled' as const,errorSelector:'',timeoutMs:30000},
+                    {readySelector:'#r',busySelector:'#busy',readyState:'enabled' as const,errorSelector:'',timeoutMs:180001},
+                    {readySelector:'{{secret}}',busySelector:'#busy',readyState:'enabled' as const,errorSelector:'',timeoutMs:30000}])
+      expect(()=>repairOutcomeWait(sample,'wait',x)).toThrow();
+    expect(()=>repairOutcomeWait({steps:[...sample.steps].reverse()},'wait',null)).toThrow();
   });
 });

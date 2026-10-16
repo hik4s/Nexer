@@ -9,6 +9,7 @@ const titles: Record<string, string> = {
   navigate: 'Abrir página', click: 'Clicar', fill: 'Preencher campo', select: 'Selecionar opção',
   press: 'Pressionar tecla', check: 'Marcar opção', choose: 'Escolher opção', choose_radio: 'Escolher alternativa',
   set_value: 'Ajustar controle', wait_for: 'Aguardar condição', wait_for_any: 'Aguardar uma das condições',
+  wait_for_outcome: 'Aguardar resultado da operação',
   hover: 'Apontar para elemento', scroll: 'Rolar página', drag: 'Arrastar elemento',
   query: 'Consultar e verificar resultado', request_download: 'Solicitar relatório',
   download: 'Baixar arquivo', snapshot_downloads: 'Verificar central antes da solicitação',
@@ -87,4 +88,40 @@ export function repairStep(input: Recipe, stepId: string, repair: StepRepair): R
     wait.learning = {source: 'manual', confidence: 'high'};
   }
   return recipe;
+}
+
+export type OutcomeRepair = {busySelector: string; readySelector: string;
+  readyState: 'enabled'|'visible'; timeoutMs: number; errorSelector: string};
+
+/** Change only the reviewed wait. Do not change the original click or its retry policy. */
+export function repairOutcomeWait(input: Recipe, stepId: string, repair: OutcomeRepair | null): Recipe {
+  const matches = input.steps.filter(step => step.id === stepId);
+  const index = input.steps.findIndex(step => step.id === stepId);
+  const step = matches[0];
+  if (matches.length !== 1 || !step || step.action !== 'wait_for_outcome' ||
+      index < 1 || input.steps[index - 1].action !== 'click' ||
+      input.steps[index - 1].id !== step.after_step_id)
+    throw new Error('A espera deve permanecer imediatamente após a ação original.');
+  const updated = structuredClone(input);
+  if (repair === null) {
+    updated.steps.splice(index, 1);
+    return updated;
+  }
+  const valid = (value: string) => typeof value === 'string' && value.length <= 2048 &&
+    !value.includes('{{') && !value.includes('}}');
+  if (!valid(repair.busySelector) || !valid(repair.readySelector) || !repair.readySelector.trim() ||
+      !valid(repair.errorSelector) ||
+      !['enabled','visible'].includes(repair.readyState) ||
+      !Number.isInteger(repair.timeoutMs) || repair.timeoutMs < 100 || repair.timeoutMs > 180000)
+    throw new Error('Revise os seletores e o tempo limite desta espera.');
+  const target = updated.steps[index];
+  if (repair.busySelector.trim()) target.busy_selector = repair.busySelector.trim();
+  else delete target.busy_selector;
+  target.ready_selector = repair.readySelector.trim();
+  target.ready_state = repair.readyState;
+  target.timeout_ms = repair.timeoutMs;
+  if (repair.errorSelector.trim()) target.error_selector = repair.errorSelector.trim();
+  else delete target.error_selector;
+  target.learning = {source: 'manual', confidence: 'high'};
+  return updated;
 }

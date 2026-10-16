@@ -18,6 +18,10 @@ Use `-NoLaunch` para instalar sem abrir serviços. A opção antiga `-SkipAuthSe
 
 Ele **não instala Python, Node ou Edge**, não altera um banco existente silenciosamente e **não inicia worker de relatórios**. Se já existir `data/nexer.db`, ele interrompe com orientação; para atualizar uma instalação existente, faça backup e analise antes de usar a opção `-UpgradeExistingDatabase`. Para verificar sem abrir serviços: `powershell -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\install_nexer.ps1 -NoLaunch`.
 
+## Recuperar interface ausente sem reinstalar a API
+
+Se a janela do Nexer informar que o frontend nao foi preparado (ausencia de `node_modules/vite`), **nao use Reiniciar API para instalar pacotes**. Na raiz do projeto, abra **`Preparar-Frontend-Nexer.cmd`** e aguarde a conclusao. Esse reparo roda `npm ci` usando `apps/frontend/package-lock.json`, nao cria nem altera banco, `.env`, API ou worker. Requer Node/npm compativeis e acesso ao registro npm; se a rede corporativa bloquear o download, o comando retorna erro legivel e preserva o banco e a API. Depois, use **Abrir-Nexer.cmd** ou o botao **Abrir dashboard**. O comando nao e necessario quando a interface ja esta preparada.
+
 ## Instalar manualmente — somente em uma pasta nova
 
 Alternativamente, execute estes comandos **na raiz do projeto clonado**, sem reutilizar banco existente:

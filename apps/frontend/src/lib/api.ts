@@ -333,6 +333,10 @@ export const api = {
     }),
 
   getDiagnostics: () => request<DiagnosticsResponse>("/diagnostics"),
+  probeDeveloperSelector: (url: string, selector: string) => request<{
+    mode: "headless"; status: "FOUND" | "NOT_FOUND" | "AMBIGUOUS" | "PAGE_UNAVAILABLE" | "CROSS_ORIGIN_REDIRECT";
+    matches: number; visible: boolean; enabled: boolean; elapsed_ms: number;
+  }>("/developer-eye/probe", {method: "POST", body: JSON.stringify({url, selector})}),
 
   listDestinations: (params?: { limit?: number; offset?: number }) => {
     const query = new URLSearchParams();

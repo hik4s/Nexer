@@ -13,6 +13,7 @@ KNOWN_ACTIONS = {
     "press",
     "wait_for",
     "wait_for_any",
+    "wait_for_outcome",
     "switch_tab",
     "download",
     "validate_file",
@@ -76,6 +77,7 @@ def validate_recipe(recipe: dict) -> dict:
         raise RecipeValidationError("FILE_OUTPUT_REQUIRED")
 
     seen_ids: set[str] = set()
+    previous_actions: dict[str, str] = {}
     declared = set(variables)
 
     for index, step in enumerate(steps):
@@ -94,6 +96,16 @@ def validate_recipe(recipe: dict) -> dict:
             raise RecipeValidationError(f"UNKNOWN_ACTION:{action}")
 
         _validate_step_requirements(action, step)
+        if action == "wait_for_outcome":
+            previous = steps[index - 1] if index else None
+            if not isinstance(previous, dict) or previous.get("action") != "click" or step["after_step_id"] != previous.get("id"):
+                raise RecipeValidationError("OUTCOME_PREDECESSOR_INVALID")
+            if (previous.get("retry") or {}).get("max_attempts", 1) > 1:
+                raise RecipeValidationError("OUTCOME_RETRY_FORBIDDEN")
+        if action == "validate_file" and "source_download" in step:
+            if previous_actions.get(step["source_download"]) != "download":
+                raise RecipeValidationError("FILE_VALIDATION_SOURCE_INVALID")
+        previous_actions[step_id] = action
         _validate_retry(step)
 
         for value in step.values():
@@ -184,6 +196,32 @@ def _validate_retry(step: dict) -> None:
 
 
 def _validate_step_requirements(action: str, step: dict) -> None:
+    if action == "wait_for_outcome":
+        required = {"id", "action", "after_step_id", "ready_selector", "ready_state", "timeout_ms", "learning"}
+        optional = {"busy_selector", "error_selector", "retry"}
+        if not required.issubset(step) or set(step) - (required | optional):
+            raise RecipeValidationError("OUTCOME_CONTRACT_INVALID")
+        for key in ("after_step_id", "ready_selector", "busy_selector", "error_selector"):
+            if key in step and (not isinstance(step[key], str) or not step[key].strip() or len(step[key]) > 2048):
+                raise RecipeValidationError("OUTCOME_CONTRACT_INVALID")
+        if step["ready_state"] not in {"visible", "enabled"}:
+            raise RecipeValidationError("OUTCOME_CONTRACT_INVALID")
+        retry = step.get("retry") or {}
+        if not isinstance(retry, dict):
+            raise RecipeValidationError("RETRY_CONFIG_INVALID")
+        if retry.get("max_attempts", 1) > 1:
+            raise RecipeValidationError("OUTCOME_RETRY_FORBIDDEN")
+        if "frames" in step or any("{{" in step[key] for key in ("ready_selector", "busy_selector", "error_selector") if key in step):
+            raise RecipeValidationError("OUTCOME_CONTRACT_INVALID")
+    if action == "validate_file":
+        has_path = "path" in step
+        has_source = "source_download" in step
+        if has_path == has_source:
+            raise RecipeValidationError("FILE_VALIDATION_SOURCE_INVALID")
+        reference = step["path" if has_path else "source_download"]
+        if not isinstance(reference, str) or not reference.strip():
+            raise RecipeValidationError("FILE_VALIDATION_SOURCE_INVALID")
+        return
     if action == 'query':
         try:
             validate_query_step(step)
@@ -214,7 +252,7 @@ def _validate_step_requirements(action: str, step: dict) -> None:
         raise RecipeValidationError("STEP_TIMEOUT_INVALID")
     if "learning" in step:
         learning = step["learning"]
-        if action != "wait_for" or not isinstance(learning, dict) or set(learning) != {"source", "confidence"} or learning["source"] not in {"automatic", "manual"} or learning["confidence"] not in {"high", "medium"}:
+        if action not in {"wait_for", "wait_for_outcome"} or not isinstance(learning, dict) or set(learning) != {"source", "confidence"} or learning["source"] not in {"automatic", "manual"} or learning["confidence"] not in {"high", "medium"}:
             raise RecipeValidationError("WAIT_LEARNING_INVALID")
     if action == "navigate":
         url = step.get("url")

@@ -50,6 +50,18 @@ class SmartWaitTests(unittest.TestCase):
         self.assertEqual(optimize_recipe(first), first)
         self.assertNotIn("private-value-canary", json.dumps(first))
 
+    def test_outcome_wait_supersedes_redundant_readiness_for_same_result(self):
+        recording = Recording("Search")
+        recording.accept({"action": "click", "selector": "#search"})
+        recording.accept_outcome({"busy_selector": "#spinner", "ready_selector": "#result",
+                                  "ready_state": "enabled", "confidence": "high"})
+        recording.accept({"action": "click", "selector": "#result"})
+        optimized = optimize_recipe(recording.recipe())
+        result_index = next(i for i, step in enumerate(optimized["steps"]) if step["action"] == "wait_for_outcome")
+        self.assertEqual(optimized["steps"][result_index + 1]["action"], "click")
+        self.assertEqual(optimized["steps"][result_index + 1]["selector"], "#result")
+        self.assertEqual(optimize_recipe(optimized), optimized)
+
     def test_frames_and_unique_ids(self):
         recording = Recording("Frames")
         recording.accept({"action": "click", "selector": "button", "frames": ["iframe"]})

@@ -133,6 +133,111 @@ class EdgeCaptureTests(unittest.TestCase):
             finally:
                 browser.close()
 
+    def test_calendar_icon_creates_reusable_inputs_without_popup_clicks_or_values(self):
+        """PrimeNG-style calendar buttons map to the associated date/time inputs."""
+        events = []
+        recording = Recording("Calendar")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(channel="msedge", headless=True)
+            try:
+                page = browser.new_page()
+                page.expose_binding("nexerCapture", lambda source, event: (events.append(event), recording.accept(event)))
+                page.set_content('''
+                    <div class="form-field">
+                      <label for="start">Data Hora Início *</label>
+                      <span class="p-calendar p-component p-inputwrapper">
+                        <input id="start" type="text" value="16/09/2026 00:00" />
+                        <button type="button" class="p-datepicker-trigger p-button" aria-label="Mostrar calendário">
+                          <span class="pi pi-calendar"></span></button>
+                      </span>
+                    </div>
+                    <div class="form-field">
+                      <label for="end">Data Hora Fim</label>
+                      <span class="p-calendar p-component p-inputwrapper">
+                        <input id="end" type="text" value="31/10/2026 23:59" />
+                        <button type="button" class="p-datepicker-trigger" aria-label="Mostrar calendário">
+                          <span class="pi pi-calendar"></span></button>
+                      </span>
+                    </div>
+                    <div class="p-datepicker-panel" style="display:none">
+                      <div class="p-datepicker-header"><button id="next" type="button">Próximo mês</button></div>
+                      <table class="p-datepicker-calendar"><tr><td><button id="day" type="button">20</button></td></tr></table>
+                    </div>
+                    <button id="search" type="button">Pesquisar</button>
+                    <script>
+                      document.querySelectorAll('.p-datepicker-trigger').forEach(button => {
+                        button.addEventListener('click', () => {
+                          window.currentCalendar = button.parentElement.querySelector('input');
+                          document.querySelector('.p-datepicker-panel').style.display = 'block';
+                        });
+                      });
+                      document.querySelector('#day').addEventListener('click', () => {
+                        window.currentCalendar.value = '20/10/2026 12:00';
+                        window.currentCalendar.dispatchEvent(new Event('change', {bubbles:true}));
+                        document.querySelector('.p-datepicker-panel').style.display = 'none';
+                      });
+                    </script>
+                ''')
+                page.evaluate(recorder_script())
+                page.locator(".p-datepicker-trigger").first.click()
+                page.locator("#next").click()
+                page.locator("#day").click()
+                page.locator(".p-datepicker-trigger").last.click()
+                page.locator("#search").click()
+                page.wait_for_timeout(100)
+                actions = [event["action"] for event in events]
+                self.assertEqual(actions, ["fill", "fill", "fill", "click"])  # Calendar selection emits a second fill, deduplicated in the recipe.
+                self.assertEqual([step["action"] for step in recording.steps], ["navigate", "fill", "fill", "click"])
+                variables = recording.recipe()["variables"]
+                self.assertEqual(variables["input_001"]["label"], "Data Hora Início")
+                self.assertEqual(variables["input_002"]["label"], "Data Hora Fim")
+                self.assertEqual(variables["input_001"]["field"]["control"], "datetime-local")
+                self.assertEqual(variables["input_001"]["field"]["site_format"], "dd/MM/yyyy HH:mm:ss")
+                self.assertNotIn("16/09/2026", json.dumps(recording.recipe()))
+                self.assertNotIn("20/10/2026", json.dumps(recording.recipe()))
+                self.assertNotIn("31/10/2026", json.dumps(recording.recipe()))
+                replay_page = browser.new_page()
+                replay_page.set_content('<input id="start"><input id="end"><button id="search">Pesquisar</button>')
+                execution = ExecutionContext(page=replay_page,
+                                             variables={"input_001": "01/11/2026 00:00", "input_002": "30/11/2026 23:59"},
+                                             downloads_dir="temp")
+                for step in recording.steps[1:]:
+                    create_default_registry().execute(step["action"], step, execution)
+                self.assertEqual(replay_page.locator("#start").input_value(), "01/11/2026 00:00")
+                self.assertEqual(replay_page.locator("#end").input_value(), "30/11/2026 23:59")
+            finally:
+                browser.close()
+
+    def test_calendar_capture_preserves_semantic_labels_and_site_datetime_format(self):
+        recording = Recording("Dates")
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(channel="msedge", headless=True)
+            try:
+                page = browser.new_page()
+                page.expose_binding("nexerCapture", lambda source, event: accept_capture(recording, event))
+                page.set_content("""<section id="filters">
+                  <div class="field"><label for="begin">Data Hora Início *</label>
+                   <p-calendar class="p-calendar"><input id="begin" placeholder="dd/mm/yyyy hh:mm:ss">
+                    <button type="button" class="p-datepicker-trigger"><span class="pi-calendar"></span></button></p-calendar></div>
+                  <div class="field"><span class="field-label">Data Hora Fim</span>
+                   <p-datepicker class="p-datepicker"><input id="finish" placeholder="dd/mm/yyyy hh:mm:ss">
+                    <button type="button" class="p-datepicker-trigger"><span class="pi-calendar"></span></button></p-datepicker></div>
+                  <input type="password" value="date-secret-canary"></section>""")
+                page.evaluate(recorder_script())
+                page.locator("#begin + button").click()
+                page.locator("#finish + button").click()
+                page.wait_for_timeout(110)
+                variables = recording.recipe()["variables"]
+                self.assertEqual(variables["input_001"]["label"], "Data Hora Início")
+                self.assertEqual(variables["input_002"]["label"], "Data Hora Fim")
+                for name in ("input_001", "input_002"):
+                    self.assertEqual(variables[name]["field"]["control"], "datetime-local")
+                    self.assertEqual(variables[name]["field"]["site_format"], "dd/MM/yyyy HH:mm:ss")
+                self.assertNotIn("date-secret-canary", json.dumps(recording.recipe()))
+                self.assertEqual([s["action"] for s in recording.steps], ["navigate", "fill", "fill"])
+            finally:
+                browser.close()
+
     def test_labels_stop_toolbar_and_collection_do_not_capture_filled_values(self):
         recording = Recording("Report")
         stopped = []

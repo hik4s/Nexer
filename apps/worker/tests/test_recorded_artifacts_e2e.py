@@ -133,7 +133,9 @@ class RecordedArtifactsE2E(unittest.TestCase):
                     recipe = recording.recipe()
                     self.assertNotIn('demonstration-canary', json.dumps(recipe))
                     download = next(step for step in recipe['steps'] if step['action'] == 'download')
-                    recipe['steps'].append({'id':'validate','action':'validate_file','path':download['filename'],
+                    # The browser supplies the real filename, independently of the dashboard fallback.
+                    download['preserve_filename'] = True
+                    recipe['steps'].append({'id':'validate','action':'validate_file','source_download':download['id'],
                         'min_size':1,'extensions':['.csv'],'calculate_checksum':True})
                     recorder.close()
                     with sessions() as db:
@@ -151,7 +153,7 @@ class RecordedArtifactsE2E(unittest.TestCase):
                             cookies={SESSION_COOKIE_NAME:token},trust_env=False,timeout=10) as client:
                             outputs = []
                             for company in ('A','B'):
-                                inputs = {name:(base_url if name == 'base_url' else 'result.csv' if name.startswith('download_file_') else company)
+                                inputs = {name:(base_url if name == 'base_url' else 'wrong-fallback.csv' if name.startswith('download_file_') else company)
                                           for name in recipe['variables']}
                                 response = client.post('/executions',json={'name':'Synthetic '+company,
                                     'automation_ids':[automation_id],'inputs':inputs})

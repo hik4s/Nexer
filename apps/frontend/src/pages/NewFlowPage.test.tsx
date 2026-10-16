@@ -29,7 +29,9 @@ describe("Guided registration", () => {
     await user.click(screen.getByText('Validar e publicar fluxo'));
     await waitFor(()=>expect(api.createAutomationVersion).toHaveBeenCalled());
     const submitted=vi.mocked(api.createAutomationVersion).mock.lastCall?.[1] as {steps:Record<string,unknown>[]};
-    expect(submitted.steps.map(s=>s.action)).toEqual(['navigate','snapshot_downloads','request_download','download']);
+    expect(submitted.steps.map(s=>s.action)).toEqual(['navigate','snapshot_downloads','request_download','download','validate_file']);
+    expect(submitted.steps[4]).toMatchObject({source_download:'get', min_size:1});
+    expect(submitted.steps[4]).not.toHaveProperty('path');
     expect(submitted.steps[3].generation).toBe('generate');
     vi.clearAllMocks();
   });

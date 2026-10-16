@@ -69,3 +69,28 @@ it('retains a pending draft when its displayed position changes',async()=>{
   await userEvent.click(screen.getByText('Remove wait'));
   expect(screen.getByLabelText('Alvo da etapa action')).toHaveValue('#pending');
 });
+
+it('lets the user review and remove a proven post-click wait without touching the click',async()=>{
+  const recipe={steps:[
+    {id:'search',action:'click',selector:'#search'},
+    {id:'outcome',action:'wait_for_outcome',after_step_id:'search',busy_selector:'#spinner',
+     ready_selector:'#result',ready_state:'enabled',timeout_ms:30000,
+     learning:{source:'automatic',confidence:'high'}},
+    {id:'export',action:'click',selector:'#result'}
+  ]};
+  const onChange=vi.fn(),onDirty=vi.fn();
+  render(<StepReviewEditor recipe={recipe} onChange={onChange} onDirty={onDirty}/>);
+  expect(screen.getByText('2. Aguardar resultado da operação')).toBeInTheDocument();
+  await userEvent.click(screen.getByText('2. Aguardar resultado da operação'));
+  expect(screen.getByText(/confiança: high/)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Elemento que confirma a conclusão'),{target:{value:'#new-result'}});
+  fireEvent.change(screen.getByLabelText('Tempo limite (milissegundos)'),{target:{value:'45000'}});
+  await userEvent.click(screen.getByRole('button',{name:'Aplicar espera outcome'}));
+  expect(onChange.mock.lastCall?.[0].steps[1]).toMatchObject({
+    after_step_id:'search',ready_selector:'#new-result',timeout_ms:45000,
+    learning:{source:'manual',confidence:'high'}
+  });
+  expect(onChange.mock.lastCall?.[0].steps[0]).toEqual(recipe.steps[0]);
+  await userEvent.click(screen.getByRole('button',{name:'Remover espera outcome'}));
+  expect(onChange.mock.lastCall?.[0].steps.map((s:{id:string})=>s.id)).toEqual(['search','export']);
+});

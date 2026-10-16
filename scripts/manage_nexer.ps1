@@ -27,6 +27,14 @@ if ($Action -eq 'status') {
     if (Get-LocalApi) { Write-Output 'API_RUNNING' } else { Write-Output 'API_STOPPED' }
     exit 0
 }
+# Refuse a partial restart: the desktop button starts API and dashboard together.
+# Missing frontend packages must be repaired explicitly, without touching an active API.
+if ($Action -in @('start','restart')) {
+    $viteScript = Join-Path $root 'apps\frontend\node_modules\vite\bin\vite.js'
+    if (-not (Test-Path -LiteralPath $viteScript -PathType Leaf)) {
+        throw 'Interface nao preparada. Abra Preparar-Frontend-Nexer.cmd na pasta do Nexer. A API existente nao foi interrompida.'
+    }
+}
 if ($Action -in @('stop','restart')) {
     $api = Get-LocalApi
     if ($api) {

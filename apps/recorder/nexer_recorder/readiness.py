@@ -18,8 +18,12 @@ def normalize_readiness(event: dict, previous_step: dict) -> tuple[dict | None, 
             or not isinstance(frames, list) or len(frames) > 16
             or any(not isinstance(frame, str) or not frame.strip() or len(frame) > 2048 for frame in frames)):
         raise ValueError('RECORDER_EVENT_INVALID')
-    same_wait = (previous_step.get('action') == 'wait_for' and previous_step.get('selector') == selector
-                 and previous_step.get('frames', []) == frames)
+    same_wait = (
+        (previous_step.get('action') == 'wait_for' and previous_step.get('selector') == selector
+         and previous_step.get('frames', []) == frames)
+        or (previous_step.get('action') == 'wait_for_outcome' and previous_step.get('ready_selector') == selector
+            and previous_step.get('ready_state') == signal['state'] and not frames)
+    )
     if same_wait or (clean['action'] == 'download' and 'collection' in clean):
         return None, clean
     return {'action': 'wait_for', 'selector': selector, 'frames': list(frames),

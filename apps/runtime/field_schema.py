@@ -3,11 +3,14 @@ import math
 import re
 
 CONTROLS = {"text", "textarea", "date", "datetime-local", "time", "month", "week", "number", "email", "url", "tel", "search", "range", "color", "select", "multiselect", "checkbox", "radio"}
-KEYS = {"control", "min", "max", "step", "min_length", "max_length", "pattern", "input_mode", "rows", "required"}
+KEYS = {"control", "min", "max", "step", "min_length", "max_length", "pattern", "input_mode", "rows", "required", "site_format"}
+SITE_DATE_FORMATS = {"dd/MM/yyyy", "dd/MM/yyyy HH:mm", "dd/MM/yyyy HH:mm:ss", "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss"}
 
 
 def validate_field(field):
     if not isinstance(field, dict) or set(field) - KEYS or field.get("control") not in CONTROLS:
+        raise ValueError("FIELD_SCHEMA_INVALID")
+    if "site_format" in field and (field["control"] not in {"date", "datetime-local"} or field["site_format"] not in SITE_DATE_FORMATS or (("HH:" in field["site_format"]) != (field["control"] == "datetime-local"))):
         raise ValueError("FIELD_SCHEMA_INVALID")
     if "required" in field and type(field["required"]) is not bool:
         raise ValueError("FIELD_SCHEMA_INVALID")

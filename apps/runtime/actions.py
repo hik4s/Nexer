@@ -4,6 +4,7 @@ import re
 import time
 from download_generation import snapshot_downloads, request_download, correlated_download
 from query_execution import execute_query
+from outcome_wait import wait_for_outcome
 from pathlib import Path, PurePath
 
 
@@ -36,6 +37,7 @@ def create_default_registry() -> ActionRegistry:
     registry.register("press", _press)
     registry.register("wait_for", _wait_for)
     registry.register("wait_for_any", _wait_for_any)
+    registry.register("wait_for_outcome", wait_for_outcome)
     registry.register("switch_tab", _switch_tab)
     registry.register("snapshot_downloads", snapshot_downloads)
     registry.register("request_download", request_download)
@@ -351,6 +353,7 @@ def _download(step, context):
         if target.exists():
             raise ActionExecutionError("DOWNLOAD_FILENAME_ALREADY_EXISTS")
     download.save_as(str(target))
+    context.download_outputs[step["id"]] = target
 
     context.artifacts.append({"path": str(target), "type": "download"})
     context.event("action.finished", action="download", step_id=step["id"], path=str(target))
@@ -362,7 +365,13 @@ def _validate_file(step, context):
         context.event("action.finished", action="validate_file", step_id=step["id"])
         return True
 
-    raw_path = context.resolve(step["path"])
+    if "source_download" in step:
+        completed = context.download_outputs.get(step["source_download"])
+        if completed is None:
+            raise ActionExecutionError("DOWNLOAD_SOURCE_UNAVAILABLE")
+        raw_path = completed
+    else:
+        raw_path = context.resolve(step["path"])
     path = _resolve_download_path(raw_path, context.downloads_dir)
 
     if not path.is_file():

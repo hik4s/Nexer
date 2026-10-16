@@ -2,6 +2,7 @@ from dataclasses import dataclass
 import time
 
 from actions import ActionExecutionError, create_default_registry
+from outcome_wait import arm_outcome, clear_outcome, OutcomeWaitError
 from recipe import validate_recipe
 from resolver import VariableResolver
 from query_execution import QueryExecutionError
@@ -21,10 +22,14 @@ class RecipeRunner:
 
     def run(self, recipe: dict, context) -> RunResult:
         context.download_state.clear()
+        context.download_outputs.clear()
+        clear_outcome(context)
         try:
             return self._run(recipe, context)
         finally:
+            clear_outcome(context)
             context.download_state.clear()
+            context.download_outputs.clear()
 
     def _run(self, recipe: dict, context) -> RunResult:
         validated = validate_recipe(recipe)
@@ -69,11 +74,13 @@ class RecipeRunner:
                 if context.auth_guard is not None:
                     context.page = context.auth_guard.ensure_authenticated(context.page)
                 try:
+                    if index + 1 < len(validated["steps"]) and validated["steps"][index + 1]["action"] == "wait_for_outcome":
+                        arm_outcome(context, validated["steps"][index + 1])
                     self.registry.execute(step["action"], step, context)
                     step_succeeded = True
                     break
                 except Exception as exc:
-                    if isinstance(exc, QueryExecutionError) and str(exc) == 'EXECUTION_CANCELLED':
+                    if isinstance(exc, (QueryExecutionError, OutcomeWaitError)) and str(exc) == 'EXECUTION_CANCELLED':
                         context.checkpoint(step_id=step['id'], step_index=index, status='CANCELLED')
                         return RunResult(completed_steps=completed, failed_step_id=None, cancelled=True)
                     last_error = exc

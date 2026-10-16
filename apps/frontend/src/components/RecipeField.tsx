@@ -1,10 +1,11 @@
 import { useRef } from "react";
+import {isSupportedSiteFormat, toNativeDateTime, toSiteDateTime, type SiteDateFormat} from "../lib/siteDates";
 
 export type FieldRules = {
   control?: string; min?: number | string; max?: number | string; step?: number | "any";
   min_length?: number; max_length?: number; pattern?: string;
   input_mode?: "none" | "text" | "decimal" | "numeric" | "tel" | "search" | "email" | "url";
-  rows?: number; required?: boolean;
+  rows?: number; required?: boolean; site_format?: SiteDateFormat;
 };
 export type ParameterDeclaration = {
   label?: string; type?: string; required?: boolean; secret?: boolean; format?: string;
@@ -79,6 +80,23 @@ export function RecipeField({name, declaration, value, catalog, onChange, idPref
       <option value="">Selecione…</option><option value="true">Sim</option><option value="false">Não</option>
     </select>
   </label>;
+  if (["date","datetime-local"].includes(control) && isSupportedSiteFormat(rules.site_format)) {
+    const format = rules.site_format;
+    const native = toNativeDateTime(value ?? "", format, control === "datetime-local");
+    return <div className="recipe-date-field">
+      <label htmlFor={id}>{label}
+        <input id={id} type={control} step={control === "datetime-local" ? 1 : undefined}
+          required={required} min={rules.min} max={rules.max}
+          value={native ?? ""}
+          onChange={event => {
+            const result = toSiteDateTime(event.target.value, format);
+            if (result !== null) onChange(result);
+          }}/>
+      </label>
+      <span className="muted">Formato enviado ao site: {format}</span>
+      {native === null ? <p role="alert">O valor anterior não corresponde à data esperada. Selecione uma data válida.</p> : null}
+    </div>;
+  }
   const common = {
     id, required, minLength: rules.min_length, maxLength: rules.max_length,
     value: value ?? "", onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange(event.target.value),

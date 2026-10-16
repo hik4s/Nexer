@@ -15,6 +15,7 @@ from app.api.execution_batches import router as execution_batches_router
 from app.api.automations import router as automations_router
 from app.api.events import router as events_router
 from app.api.diagnostics import router as diagnostics_router
+from app.api.developer_eye import router as developer_eye_router
 from app.api.automation_versions import router as automation_versions_router
 from app.api.destinations import router as destinations_router
 from app.api.executions import router as executions_router
@@ -195,6 +196,7 @@ app.include_router(executions_router)
 app.include_router(artifacts_router)
 app.include_router(events_router)
 app.include_router(diagnostics_router)
+app.include_router(developer_eye_router)
 app.include_router(automation_versions_router)
 app.include_router(destinations_router)
 

@@ -149,6 +149,55 @@ class AutomationVersionsApiTests(unittest.TestCase):
         self.assertEqual(execution.status_code, 409)
         self.assertEqual(execution.json()["error"]["code"], "CORPORATE_AUTH_NOT_VALIDATED")
 
+    def test_semantic_outcome_roundtrip_and_rejects_stale_predecessor(self):
+        automation_id = self._create_automation()
+        recipe = self._valid_recipe()
+        recipe["steps"].extend([
+            {"id": "search", "action": "click", "selector": "#search"},
+            {"id": "wait_search", "action": "wait_for_outcome", "after_step_id": "search",
+             "busy_selector": "#busy", "ready_selector": "#export", "ready_state": "enabled",
+             "timeout_ms": 30000, "learning": {"source": "automatic", "confidence": "high"}},
+            {"id": "export", "action": "click", "selector": "#export"}
+        ])
+        url = f"/automations/{automation_id}/versions"
+        self.assertEqual(self.client.post(url, json={"recipe": recipe}).status_code, 201)
+        checked = self.client.post(url + "/1/test")
+        self.assertEqual(checked.status_code, 200, checked.text)
+        self.assertEqual(self.client.post(url + "/1/publish").status_code, 200)
+        self.assertEqual(self.client.get(url + "/1").json()["recipe"], recipe)
+        invalid = {**recipe, "steps": [
+            *recipe["steps"][:2], {**recipe["steps"][2], "after_step_id": "open"},
+            recipe["steps"][3]]}
+        self.assertEqual(self.client.post(url, json={"recipe": invalid}).status_code, 201)
+        rejected = self.client.post(url + "/2/test")
+        self.assertEqual(rejected.status_code, 422)
+        self.assertEqual(self.client.post(url + "/2/publish").status_code, 409)
+
+    def test_guided_download_validation_round_trips_through_api(self):
+        automation_id = self._create_automation()
+        recipe = self._valid_recipe()
+        recipe["steps"] += [
+            {"id": "get", "action": "download", "selector": "#export",
+             "filename": "fallback.csv", "preserve_filename": True},
+            {"id": "file_check_get", "action": "validate_file",
+             "source_download": "get", "min_size": 1},
+        ]
+        url = f"/automations/{automation_id}/versions"
+        self.assertEqual(self.client.post(url, json={"recipe": recipe}).status_code, 201)
+        checked = self.client.post(url + "/1/test")
+        self.assertEqual(checked.status_code, 200, checked.text)
+        self.assertEqual(self.client.post(url + "/1/publish").status_code, 200)
+        self.assertEqual(self.client.get(url + "/1").json()["recipe"]["steps"][-1]["source_download"], "get")
+
+        invalid = {**recipe, "steps": [
+            *recipe["steps"][:-1],
+            {**recipe["steps"][-1], "source_download": "unknown"},
+        ]}
+        self.assertEqual(self.client.post(url, json={"recipe": invalid}).status_code, 201)
+        blocked = self.client.post(url + "/2/test")
+        self.assertEqual(blocked.status_code, 422)
+        self.assertEqual(self.client.post(url + "/2/publish").status_code, 409)
+
     def test_create_test_and_publish_version(self):
         automation_id = self._create_automation()
 

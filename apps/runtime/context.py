@@ -19,6 +19,9 @@ class ExecutionContext:
     cancellation_requested: Callable[[], bool] | None = None
     auth_guard: object | None = None
     download_state: dict = field(default_factory=dict, repr=False)
+    # Only the output path of a download completed in this run may be validated by step ID.
+    download_outputs: dict[str, Path] = field(default_factory=dict, repr=False)
+    outcome_pending: dict | None = field(default=None, repr=False)
 
     def __post_init__(self):
         self.downloads_dir = Path(self.downloads_dir)

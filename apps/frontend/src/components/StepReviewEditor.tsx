@@ -1,9 +1,63 @@
 import {useEffect, useRef, useState} from 'react';
-import {associatedAutomaticWait, repairStep, reviewSteps, type Recipe} from '../lib/stepReview';
+import {associatedAutomaticWait, repairOutcomeWait, repairStep, reviewSteps, type Recipe} from '../lib/stepReview';
 import {VisualTargetPicker} from './VisualTargetPicker';
 import type {TargetKind} from '../lib/api';
 
 type Props = {recipe: Recipe; siteUrl?: string; onChange: (recipe: Recipe) => void; onDirty: (stepId: string, dirty: boolean) => void};
+
+function OutcomeEditor({recipe, stepId, onChange, onDirty}: Props & {stepId: string}) {
+  const step = recipe.steps.find(item => item.id === stepId)!;
+  const [busy, setBusy] = useState(String(step.busy_selector ?? ''));
+  const [ready, setReady] = useState(String(step.ready_selector ?? ''));
+  const [state, setState] = useState<'enabled'|'visible'>(step.ready_state === 'enabled' ? 'enabled' : 'visible');
+  const [errorSelector, setErrorSelector] = useState(String(step.error_selector ?? ''));
+  const [timeout, setTimeoutValue] = useState(Number(step.timeout_ms ?? 30000));
+  const [error, setError] = useState('');
+  // Keep external revisions synchronized after the user has applied a change.
+  useEffect(() => {
+    setBusy(String(step.busy_selector ?? ''));
+    setReady(String(step.ready_selector ?? ''));
+    setState(step.ready_state === 'enabled' ? 'enabled' : 'visible');
+    setErrorSelector(String(step.error_selector ?? ''));
+    setTimeoutValue(Number(step.timeout_ms ?? 30000));
+  }, [step.busy_selector, step.ready_selector, step.ready_state, step.error_selector, step.timeout_ms]);
+  const apply = () => {
+    try {
+      const changed = repairOutcomeWait(recipe, stepId, {busySelector:busy, readySelector:ready,
+        readyState:state, errorSelector, timeoutMs:timeout});
+      onChange(changed); onDirty(stepId, false); setError('');
+    } catch {
+      setError('Revise os seletores e o tempo limite da operação.');
+      onDirty(stepId, true);
+    }
+  };
+  const remove = () => {onChange(repairOutcomeWait(recipe, stepId, null)); onDirty(stepId, false);};
+  return <fieldset className="step-target-editor">
+    <legend>Revisar espera · {stepId}</legend>
+    <p className="muted">O Nexer observa o carregamento que começou após {String(step.after_step_id)}.
+      Para prosseguir, o resultado precisa apresentar uma mudança verificável. A ausência do spinner, sozinha, não é sucesso.</p>
+    <p className="muted">Inferência: {String((step.learning as {source?:string}|undefined)?.source ?? 'manual')} ·
+      confiança: {String((step.learning as {confidence?:string}|undefined)?.confidence ?? 'a revisar')}.</p>
+    <label>Indicador de carregamento (opcional)
+      <input value={busy} maxLength={2048} onChange={e=>{setBusy(e.target.value);onDirty(stepId,true);}}/></label>
+    <label>Elemento que confirma a conclusão
+      <input value={ready} maxLength={2048} onChange={e=>{setReady(e.target.value);onDirty(stepId,true);}}/></label>
+    <label>Condição de conclusão
+      <select value={state} onChange={e=>{setState(e.target.value as 'enabled'|'visible');onDirty(stepId,true);}}>
+        <option value="enabled">Habilitado</option><option value="visible">Visível</option>
+      </select></label>
+    <label>Erro visível (opcional)
+      <input value={errorSelector} maxLength={2048} onChange={e=>{setErrorSelector(e.target.value);onDirty(stepId,true);}}/></label>
+    <label>Tempo limite (milissegundos)
+      <input type="number" min={100} max={180000} step={100} value={timeout}
+             onChange={e=>{setTimeoutValue(Number(e.target.value));onDirty(stepId,true);}}/></label>
+    {error ? <p role="alert">{error}</p> : null}
+    <div className="button-row">
+      <button type="button" className="secondary-button" onClick={apply}>Aplicar espera {stepId}</button>
+      <button type="button" className="secondary-button" onClick={remove}>Remover espera {stepId}</button>
+    </div>
+  </fieldset>;
+}
 
 function TargetEditor({recipe, siteUrl, stepId, expanded, onChange, onDirty}: Props & {stepId: string; expanded: boolean}) {
   const step = recipe.steps.find(item => item.id === stepId)!;
@@ -71,7 +125,7 @@ export function StepReviewEditor({recipe, siteUrl, onChange, onDirty}: Props) {
       setExpandedSteps(previous => ({...previous, [row.id]: expanded}));
     }}>
       <summary><strong>{row.position}. {row.title}</strong>{row.parameterLabel ? <span className="step-review-parameter">{row.parameterLabel}</span> : null}<span className="step-review-context">{row.context}</span></summary>
-      {row.editable ? <TargetEditor recipe={recipe} siteUrl={siteUrl} stepId={row.id} expanded={!!expandedSteps[row.id]} onChange={onChange} onDirty={onDirty} /> : <p className="muted">Esta etapa mantém sua configuração original. Downloads em central são revisados na seção específica; outras configurações avançadas ficam no Studio.</p>}
+      {recipe.steps.find(step=>step.id===row.id)?.action === "wait_for_outcome" ? <OutcomeEditor recipe={recipe} stepId={row.id} onChange={onChange} onDirty={onDirty}/> : row.editable ? <TargetEditor recipe={recipe} siteUrl={siteUrl} stepId={row.id} expanded={!!expandedSteps[row.id]} onChange={onChange} onDirty={onDirty} /> : <p className="muted">Esta etapa mantém sua configuração original. Downloads em central são revisados na seção específica; outras configurações avançadas ficam no Studio.</p>}
     </details></li>)}</ol>
   </section>;
 }

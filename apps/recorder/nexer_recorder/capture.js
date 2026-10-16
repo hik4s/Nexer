@@ -42,6 +42,22 @@
     copy.querySelectorAll('input,select,textarea,[contenteditable],script,style').forEach(child => child.remove());
     return (copy.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 100);
   };
+  // Only static calendar masks and captions; never inspect the date that was typed.
+  const siteDateMask = raw => {
+    const normalized = String(raw || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    const formats = {
+      'dd/mm/yyyy': 'dd/MM/yyyy',
+      'dd/mm/yyyy hh:mm': 'dd/MM/yyyy HH:mm',
+      'dd/mm/yyyy hh:mm:ss': 'dd/MM/yyyy HH:mm:ss',
+      'yyyy-mm-dd': 'yyyy-MM-dd',
+      'yyyy-mm-dd hh:mm:ss': 'yyyy-MM-dd HH:mm:ss'
+    };
+    return formats[normalized] || null;
+  };
+  const staticCaption = element => {
+    const text = structuralText(element).replace(/\s*[*:]\s*$/, '').trim();
+    return text && text.length <= 80 && !/\d{2}[/.-]\d{2}[/.-]\d{4}|password|senha|token|secret/i.test(text) ? text : '';
+  };
   const snapshot = element => {
     if (!active() || fieldSnapshots.has(element) || blocked(element)) return;
     let control = element.matches('textarea,[contenteditable]') ? 'textarea' : element.matches('select') ? (element.multiple ? 'multiselect' : 'select') : element.type;
@@ -49,11 +65,32 @@
     if (element.matches('[role="radiogroup"],fieldset,form') && element.querySelector('input[type="radio"]')) control = 'radio';
     if (!['text','textarea','date','datetime-local','time','month','week','number','email','url','tel','search','range','color','select','multiselect','checkbox','radio'].includes(control)) return;
     const field = {control, required: Boolean(element.required)};
+    const calendar = element.matches('input') ? element.closest(
+      '.p-calendar,.p-datepicker,p-calendar,p-datepicker,[data-pc-name="datepicker"]') : null;
     const labelled = (element.getAttribute('aria-labelledby') || '').split(/\s+/).filter(Boolean)
       .map(id => structuralText(element.getRootNode().getElementById?.(id))).join(' ').trim();
+    // PrimeNG-style calendar inputs may have a sibling label rather than a native label association.
+    const group = calendar?.parentElement;
+    const nearbyLabels = group && group.querySelectorAll('input:not([type="hidden"])').length === 1
+      ? [...group.querySelectorAll('label,.field-label,.p-field-label')].filter(node => !node.htmlFor || node.htmlFor === element.id) : [];
+    const nearbyLabel = nearbyLabels.length === 1 ? staticCaption(nearbyLabels[0]) : '';
     const label = labelled || element.getAttribute('aria-label') ||
-      [...(element.labels || [])].map(structuralText).join(' ').trim() || structuralText(element.querySelector('legend'));
-    if (label) labelSnapshots.set(element, label.slice(0, 100));
+      [...(element.labels || [])].map(structuralText).join(' ').trim() ||
+      nearbyLabel || structuralText(element.querySelector('legend'));
+    const cleanedLabel = label.replace(/\s*[*:]\s*$/, '').trim();
+    if (cleanedLabel) labelSnapshots.set(element, cleanedLabel.slice(0, 100));
+    if (calendar && control === 'text') {
+      // Static placeholder/mask only: the value of the input is never examined.
+      const mask = siteDateMask(element.getAttribute('placeholder')) ||
+        siteDateMask(calendar.getAttribute('data-date-format'));
+      const timeHint = /\b(hora|horário|time|datetime)\b/i.test(cleanedLabel) ||
+        Boolean(calendar.querySelector('.pi-clock,.pi-calendar-clock,.p-timepicker'));
+      if (mask || timeHint) {
+        field.control = (mask?.includes('HH:') || (!mask && timeHint))
+          ? 'datetime-local' : 'date';
+        field.site_format = mask || 'dd/MM/yyyy HH:mm:ss';
+      }
+    }
     for (const [attribute, key] of [['minlength','min_length'], ['maxlength','max_length'], ['rows','rows']]) {
       const raw = element.getAttribute(attribute);
       if (raw !== null && /^\d+$/.test(raw)) field[key] = Number(raw);
@@ -92,9 +129,13 @@
     const label = field ? labelSnapshots.get(element) : null;
     const readiness = ['click', 'download', 'fill', 'select', 'check', 'choose', 'choose_radio', 'set_value'].includes(action)
       ? window.__nexerIntelligence?.readinessFor(element) : null;
+    const precedingOutcome = frames.length === 0 && ['click', 'download'].includes(action)
+      ? window.__nexerIntelligence?.outcomeForNext(element) : null;
     window.nexerCapture({action, selector: location, ...extra, ...(readiness ? {readiness} : {}),
-      ...(field ? {field} : {}), ...(label ? {label} : {}), ...(frames.length ? {frames} : {})}).catch(() => {});
-    if (!['scroll', 'hover', 'wait_for'].includes(action)) window.__nexerIntelligence?.recordAction();
+      ...(field ? {field} : {}), ...(label ? {label} : {}),
+      ...(precedingOutcome ? {preceding_outcome: precedingOutcome} : {}),
+      ...(frames.length ? {frames} : {})}).catch(() => {});
+    if (!['scroll', 'hover', 'wait_for'].includes(action)) window.__nexerIntelligence?.recordAction(element, action);
     return true;
   };
   const parameter = element => semantic.has(element.id) ? {parameter: element.id} : {};
@@ -108,6 +149,26 @@
       }
       send('choose_radio', group, {...parameter(group), group_index: groups.indexOf(element.name || element)});
     }
+  };
+  // Calendar triggers are controls for the adjacent input, not replayable click actions.
+  // Date picker navigation belongs to the site's popup and must not become recipe steps.
+  const calendarPopup = element => Boolean(element.closest(
+    '.p-datepicker-panel,.p-datepicker-header,.p-datepicker-calendar,.p-timepicker,' +
+    '.p-monthpicker,.p-yearpicker,.p-datepicker-buttonbar,.p-datepicker-day-view,' +
+    '.p-datepicker-month-view,.p-datepicker-year-view,.p-datepicker-day,' +
+    '.p-datepicker-month,.p-datepicker-year,[data-pc-section="panel"],' +
+    '[data-pc-section="day"],[data-pc-section="month"],[data-pc-section="year"]'
+  ));
+  const calendarInputFor = element => {
+    const button = element.closest('button,[role="button"],.p-datepicker-trigger');
+    if (!button) return null;
+    const wrapper = button.closest('.p-calendar,.p-datepicker,p-calendar,p-datepicker,[data-pc-name="datepicker"]');
+    if (!wrapper) return null;
+    const icon = button.querySelector('.pi-calendar,.pi-calendar-clock,[class*="calendar-icon"],[data-lucide="calendar"]');
+    if (!button.matches('.p-datepicker-trigger,.p-datepicker-dropdown,[data-pc-section="dropdown"],[data-pc-section="trigger"]') && !icon) return null;
+    const fields = [...wrapper.querySelectorAll('input:not([type="hidden"]):not([type="password"]):not([type="file"])')];
+    if (fields.length !== 1 || fields[0].disabled || fields[0].readOnly) return null;
+    return fields[0];
   };
   let activation = null;
   let manualWaitState = null;
@@ -128,6 +189,9 @@
       return;
     }
     if (original.closest('canvas')) { window.nexerUnsupported?.('canvas'); return; }
+    if (calendarPopup(original)) return;
+    const calendarInput = calendarInputFor(original);
+    if (calendarInput) { send('fill', calendarInput, parameter(calendarInput)); return; }
     const element = original.closest('button,a,[role="button"],input,[role="option"]') || original;
     if (element.matches('option,select')) return;
     const label = original.closest('label');
@@ -309,6 +373,11 @@
       button.textContent = 'Finalizando…';
       for (const timer of pendingScrolls.values()) clearTimeout(timer);
       for (const timer of pendingHovers.values()) clearTimeout(timer);
+      const finalOutcome = window.__nexerIntelligence?.outcomeForFinish();
+      if (finalOutcome) {
+        try {await window.nexerCapture({action:'outcome_end', preceding_outcome: finalOutcome});}
+        catch { guidance.textContent = 'Não foi possível confirmar a última espera. Revise o rascunho.'; }
+      }
       controller.abort();
       await window.nexerFinishRecording();
     };

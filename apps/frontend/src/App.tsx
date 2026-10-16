@@ -7,6 +7,7 @@ import { Icon, IconName } from "./components/Icon";
 import { AutomationsPage } from "./pages/AutomationsPage";
 import { Dashboard } from "./pages/Dashboard";
 import { DiagnosticsPage } from "./pages/DiagnosticsPage";
+import { DeveloperEyePage } from "./pages/DeveloperEyePage";
 import { DestinationsPage } from "./pages/DestinationsPage";
 import { ExecutionDetailPage } from "./pages/ExecutionDetailPage";
 import { ExecutionsPage } from "./pages/ExecutionsPage";
@@ -54,7 +55,7 @@ function ProtectedLayout() {
         <nav className="nav" aria-label="Navegação principal">
           {navigation.map((item) => <NavLink className={({ isActive }) => "nav-link" + (isActive ? " nav-link--active" : "")} end={item.end} to={item.to} key={item.to}><Icon name={item.icon} />{item.label}</NavLink>)}
         </nav>
-        <details className="advanced-navigation"><summary>Ferramentas e ajustes</summary><nav className="nav" aria-label="Ferramentas"><NavLink className="nav-link" to="/flows/new"><Icon name="flows" />Criar fluxo</NavLink><NavLink className="nav-link" to="/studio"><Icon name="studio" />Studio avançado</NavLink><NavLink className="nav-link" to="/automations"><Icon name="flows" />Catálogo técnico</NavLink><NavLink className="nav-link" to="/destinations"><Icon name="folder" />Destinos</NavLink><NavLink className="nav-link" to="/diagnostics"><Icon name="pulse" />Diagnóstico</NavLink></nav></details>
+        <details className="advanced-navigation"><summary>Ferramentas e ajustes</summary><nav className="nav" aria-label="Ferramentas"><NavLink className="nav-link" to="/flows/new"><Icon name="flows" />Criar fluxo</NavLink><NavLink className="nav-link" to="/studio"><Icon name="studio" />Studio avançado</NavLink><NavLink className="nav-link" to="/automations"><Icon name="flows" />Catálogo técnico</NavLink><NavLink className="nav-link" to="/destinations"><Icon name="folder" />Destinos</NavLink><NavLink className="nav-link" to="/diagnostics"><Icon name="pulse" />Diagnóstico</NavLink><NavLink className="nav-link" to="/developer-eye"><Icon name="studio" />Eye Developer</NavLink></nav></details>
         <div className="workspace-note"><span className="status status--success" aria-hidden="true" /><span>Workspace local<small>Registre. Personalize. Execute.</small></span></div>
         <button type="button" className="secondary-button logout-button" onClick={handleLogout} disabled={loggingOut}>{loggingOut ? "Saindo..." : "Sair"}</button>
       </header>
@@ -67,6 +68,7 @@ function ProtectedLayout() {
         <Route path="/executions/new" element={<NewExecutionPage />} />
         <Route path="/executions/:id" element={<ExecutionDetailPage />} />
         <Route path="/diagnostics" element={<DiagnosticsPage />} />
+        <Route path="/developer-eye" element={<DeveloperEyePage />} />
         <Route path="/destinations" element={<DestinationsPage />} />
         <Route path="/studio" element={<StudioPage />} />
         <Route path="/site-logins" element={<LoginProfilesPage />} />

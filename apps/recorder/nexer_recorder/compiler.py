@@ -152,6 +152,36 @@ class Recording:
             return
         self.steps.append(step)
 
+    def accept_outcome(self, observation):
+        """A single high-confidence completion linked to the immediately preceding click.
+
+        No DOM text or user data is accepted; any unproved transition remains a
+        suggestion instead of an executable step.
+        """
+        if not isinstance(observation, dict) or set(observation) != {
+                "busy_selector", "ready_selector", "ready_state", "confidence"}:
+            raise ValueError("RECORDER_OUTCOME_INVALID")
+        if (observation["confidence"] != "high" or observation["ready_state"] not in {"enabled", "visible"}
+                or len(self.steps) >= 1000 or self.steps[-1]["action"] != "click"):
+            raise ValueError("RECORDER_OUTCOME_INVALID")
+        for key in ("busy_selector", "ready_selector"):
+            if not isinstance(observation[key], str) or not 0 < len(observation[key]) <= 2048:
+                raise ValueError("RECORDER_OUTCOME_INVALID")
+        previous = self.steps[-1]
+        if previous.get("frames") or previous.get("button", "left") != "left" or previous.get("click_count", 1) != 1:
+            raise ValueError("RECORDER_OUTCOME_INVALID")
+        step = {"id": f"step_{len(self.steps):03d}", "action": "wait_for_outcome",
+                "after_step_id": previous["id"],
+                "busy_selector": observation["busy_selector"],
+                "ready_selector": observation["ready_selector"],
+                "ready_state": observation["ready_state"],
+                "timeout_ms": 30000,
+                "learning": {"source": "automatic", "confidence": "high"}}
+        validate_recipe({"schema_version": 1, "name": self.name,
+                         "variables": self.variables, "steps": [*self.steps, step],
+                         "output": {"type": "none"}})
+        self.steps.append(step)
+
     def recipe(self):
         return validate_recipe(deepcopy({"schema_version": 1, "name": self.name,
             "variables": self.variables, "steps": self.steps,

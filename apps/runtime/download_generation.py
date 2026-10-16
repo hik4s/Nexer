@@ -4,6 +4,7 @@ from fnmatch import fnmatchcase
 from download_contract import SAFE_DOWNLOAD_ERRORS
 import re
 from time import monotonic
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 
 class DownloadGenerationError(RuntimeError):
@@ -80,11 +81,14 @@ _ROWS = r"""(root, c) => {
 }"""
 
 
-def _rows(scope, collection, deadline):
+def _rows(scope, collection, deadline, *, timeout_code='DOWNLOAD_BASELINE_UNAVAILABLE'):
     root = scope.locator(collection['container'])
     if root.count() != 1:
         _fail('DOWNLOAD_BASELINE_UNAVAILABLE')
-    data = root.evaluate(_ROWS, collection, timeout=_remaining(deadline))
+    try:
+        data = root.evaluate(_ROWS, collection, timeout=_remaining(deadline))
+    except PlaywrightTimeoutError:
+        _fail(timeout_code)
     if data['overflow'] or data.get('incomplete', False):
         _fail('DOWNLOAD_BASELINE_INCOMPLETE')
     for item in data['items']:
@@ -119,7 +123,15 @@ def _confirmation(scope, source, context, deadline, *, require_visible=True):
         _fail('DOWNLOAD_CONFIRMATION_AMBIGUOUS')
     if not count or (require_visible and not locator.is_visible()):
         return None
-    value = locator.get_attribute(source['attribute'], timeout=_remaining(deadline)) if 'attribute' in source else locator.text_content(timeout=_remaining(deadline))
+    try:
+        value = locator.get_attribute(source['attribute'], timeout=_remaining(deadline)) if 'attribute' in source else locator.text_content(timeout=_remaining(deadline))
+    except PlaywrightTimeoutError:
+        _check(context, deadline, 'DOWNLOAD_CONFIRMATION_TIMEOUT')
+        if not require_visible:
+            # Before the click, an unknown previous confirmation is never 'no confirmation'.
+            _fail('DOWNLOAD_CONFIRMATION_TIMEOUT')
+        # After the click, transient detachment is retried without dispatching another click.
+        return None
     value = (value or '').strip()
     if not value:
         return None
@@ -198,7 +210,7 @@ def correlated_download(step, context):
     scope = _scope(step, context)
     while True:
         _check(context, deadline, 'DOWNLOAD_GENERATION_TIMEOUT')
-        items = _rows(scope, collection, deadline)
+        items = _rows(scope, collection, deadline, timeout_code='DOWNLOAD_GENERATION_TIMEOUT')
         matches = [(index, item) for index, item in enumerate(items)
                    if item['key'] == generation['key'] and item['key'] not in baseline['identities']
                    and fnmatchcase(item['name'], collection['pattern'])]

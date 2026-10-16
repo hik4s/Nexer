@@ -44,6 +44,13 @@ function Wait-NexerReady {
     throw 'Nexer startup timed out. The launcher does not install dependencies or modify the database.'
 }
 
+# Check the frontend before starting any new API process, so missing packages never
+# leave the program partially launched. Setup is intentionally a visible one-time action.
+$viteScript = Join-Path $frontendRoot 'node_modules\vite\bin\vite.js'
+if (-not (Test-Path -LiteralPath $viteScript -PathType Leaf) -and -not (Test-NexerReady -Uri $frontendUrl)) {
+    throw 'Interface do Nexer nao preparada. Execute Preparar-Frontend-Nexer.cmd na pasta do projeto e tente novamente. A API nao foi reiniciada.'
+}
+
 if (-not (Test-NexerReady -Uri "$apiUrl/version" -Api)) {
     Assert-NexerPortFree -Port $ApiPort
     $pythonPath = Join-Path $projectRoot '.venv\Scripts\python.exe'
@@ -72,8 +79,9 @@ if (-not (Test-NexerReady -Uri "$apiUrl/version" -Api)) {
 
 if (-not (Test-NexerReady -Uri $frontendUrl)) {
     Assert-NexerPortFree -Port $FrontendPort
-    $viteScript = Join-Path $frontendRoot 'node_modules\vite\bin\vite.js'
-    if (-not (Test-Path -LiteralPath $viteScript)) { throw 'Frontend dependencies are missing. Install them before using this launcher.' }
+    if (-not (Test-Path -LiteralPath $viteScript -PathType Leaf)) {
+        throw 'Interface do Nexer nao preparada. Execute Preparar-Frontend-Nexer.cmd e tente novamente.'
+    }
     $nodePath = (Get-Command node.exe -ErrorAction Stop).Source
     $previousApiUrl = $env:VITE_API_URL
     try {

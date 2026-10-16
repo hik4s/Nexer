@@ -173,7 +173,7 @@ export function NewBatchPage() {
   const accesses = useRef(new Map<string, {owner: number; fields: CredentialFields}>());
   const [accessEpoch, setAccessEpoch] = useState(0);
   const prepare = useRef(new Map<number, (includeCredentials?: boolean) => PreparedFlow>());
-  const changed = () => {key.current = crypto.randomUUID(); setReview(null);};
+  const changed = () => {key.current = crypto.randomUUID(); setReview(null); setError("");};
   function updateCommon(patch: Record<string, string>) {
     const choiceNames = candidates.filter(([, declaration]) => ["select", "multiselect", "radio"].includes(declaration.field?.control ?? "")).map(([name]) => name);
     const indexes = Object.keys(patch).map(name => choiceNames.indexOf(name));

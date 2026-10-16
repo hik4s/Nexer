@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { api, type Automation } from "../lib/api";
 import { parameterLabel, type ParameterDeclaration } from "../components/RecipeField";
+import {DateFormatEditor} from "../components/DateFormatEditor";
 
 const DEFAULT_RECIPE = {
   schema_version: 1,
@@ -168,6 +169,13 @@ export function StudioPage() {
     else delete recipe.variables[parameter].label;
     editRecipe(JSON.stringify(recipe, null, 2));
   }
+  function changeDateField(parameter: string, field: NonNullable<ParameterDeclaration['field']>) {
+    try {
+      const recipe = JSON.parse(recipeText);
+      recipe.variables[parameter].field = field;
+      editRecipe(JSON.stringify(recipe, null, 2));
+    } catch {setFormError('Revise os campos de data antes de salvar.');}
+  }
   function chooseLoginProfile(value: string) {
     try {
       const recipe = JSON.parse(recipeText);
@@ -316,12 +324,13 @@ export function StudioPage() {
         {parameters.length ? <div className="recipe-field-editor">
           <h3>Campos no dashboard</h3>
           <p className="muted">Defina como cada campo aparece ao preparar a execução. Os tipos e as regras da gravação são preservados.</p>
-          {parameters.filter(([, declaration]) => !declaration.secret).map(([parameter, declaration]) => <label key={parameter}>
+          {parameters.filter(([, declaration]) => !declaration.secret).map(([parameter, declaration]) => <div key={parameter}><label>
             Nome no formulário: {parameter}
             <input aria-label={`Nome no formulário: ${parameter}`} value={typeof declaration.label === "string" ? declaration.label : ""} placeholder={parameterLabel(parameter)} maxLength={100}
               disabled={busy} onChange={event => renameField(parameter, event.target.value)} />
             <small className="muted">{fieldType(declaration)}{declaration.field?.required ? " · obrigatório no site" : ""}</small>
-          </label>)}
+          </label><DateFormatEditor name={parameter} declaration={declaration} disabled={busy}
+            onChange={field => changeDateField(parameter, field)} /></div>)}
         </div> : null}
         <details>
         <summary>Editor avançado da receita</summary>

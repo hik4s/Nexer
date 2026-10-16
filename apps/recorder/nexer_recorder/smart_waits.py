@@ -35,9 +35,15 @@ def optimize_recipe(recipe: dict) -> dict:
         # Waiting on the originally clicked row would break async exports.
         state = None if step["action"] == "download" and "collection" in step else _ACTION_STATES.get(step["action"])
         previous = steps[-1] if steps else None
-        same_wait = (previous is not None and previous["action"] == "wait_for"
-                     and previous.get("selector") == step.get("selector")
-                     and previous.get("frames", []) == step.get("frames", []))
+        same_wait = (previous is not None and (
+            (previous["action"] == "wait_for" and
+             previous.get("selector") == step.get("selector") and
+             previous.get("frames", []) == step.get("frames", []))
+            or (previous["action"] == "wait_for_outcome" and
+                previous.get("ready_selector") == step.get("selector") and
+                not step.get("frames") and
+                previous.get("ready_state") in {"visible", "enabled"})
+        ))
         if state and not same_wait:
             candidate = f"smart_{step['id']}"
             suffix = 2

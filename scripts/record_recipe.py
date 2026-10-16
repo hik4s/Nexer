@@ -3,7 +3,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
-from time import monotonic
+from time import monotonic, sleep
 from threading import Event
 from urllib.parse import urlsplit
 
@@ -14,7 +14,7 @@ from site_urls import validate_site_url, site_origin
 from nexer_recorder.compiler import Recording
 from nexer_recorder.readiness import normalize_readiness
 from nexer_recorder.scripts import recorder_script
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, Error as PlaywrightError
 
 
 def main(*, stop_event=None, finish_event=None, on_started=None):
@@ -44,13 +44,21 @@ def main(*, stop_event=None, finish_event=None, on_started=None):
             except ValueError:
                 permitted = False
             if permitted:
-                response = request_route.fetch(max_redirects=0)
-                if 300 <= response.status < 400:
-                    request_route.abort()
-                else:
-                    request_route.fulfill(response=response)
+                try:
+                    response = request_route.fetch(max_redirects=0)
+                    if 300 <= response.status < 400:
+                        request_route.abort()
+                    else:
+                        request_route.fulfill(response=response)
+                except PlaywrightError:
+                    # The page can cancel an XHR during a loading transition. Fail
+                    # this request closed, not the entire recording, including when
+                    # route.fulfill races with a page navigation.
+                    try: request_route.abort()
+                    except PlaywrightError: pass
             else:
-                request_route.abort()
+                try: request_route.abort()
+                except PlaywrightError: pass
         context.route("**/*", route)
         # Intercept without connect_to_server; sync close inside this callback
         # can deadlock the installed Playwright dispatcher.
@@ -101,6 +109,14 @@ def main(*, stop_event=None, finish_event=None, on_started=None):
                     active_page = source_page
                 if source["frame"].parent_frame is not None and not event.get("frames"):
                     raise ValueError("RECORDER_FRAME_UNSUPPORTED")
+                # The structural completion was observed BEFORE this next action.
+                # Compile it after its causal click, before any readiness wait.
+                event = dict(event)
+                outcome = event.pop("preceding_outcome", None)
+                if outcome is not None:
+                    recording.accept_outcome(outcome)
+                if event.get("action") == "outcome_end" and set(event) == {"action"}:
+                    return
                 wait, event = normalize_readiness(event, recording.steps[-1])
                 if wait is not None:
                     recording.accept(wait)
@@ -192,12 +208,29 @@ def main(*, stop_event=None, finish_event=None, on_started=None):
         context.on("page", attach_downloads)
         attach_downloads(page)
         try:
-            page.goto(options.url)
+            page.goto(options.url, wait_until="domcontentloaded")
             print("Gravando locais de ações. Use Parar gravação na página para revisar os campos.")
-            while not page.is_closed():
+            navigation_interruptions = 0
+            while True:
                 if stop_event is not None and stop_event.is_set(): break
                 if finish_event is not None and finish_event.is_set(): break
-                page.wait_for_timeout(250)
+                live_pages = [current for current in context.pages if not current.is_closed()]
+                if not live_pages: break
+                tick_page = page if not page.is_closed() else (
+                    active_page if active_page in live_pages else live_pages[0])
+                try:
+                    tick_page.wait_for_timeout(250)
+                    navigation_interruptions = 0
+                except PlaywrightError as exc:
+                    # A transient frame replacement during Pesquisar is not a browser crash.
+                    transient = any(marker in str(exc).lower() for marker in (
+                        "execution context was destroyed", "frame was detached",
+                        "cannot find context with specified id", "navigation interrupted"))
+                    if not transient or tick_page.is_closed() or navigation_interruptions >= 120:
+                        raise
+                    navigation_interruptions += 1
+                    sleep(0.25)
+                    continue
                 if start_requests:
                     source = start_requests.pop(0)
                     try:
